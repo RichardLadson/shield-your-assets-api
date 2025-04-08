@@ -1,0 +1,33 @@
+// src/data/medicaid_rules_2025.json
+{
+    "florida": {
+      "resourceLimitSingle": 2000,
+      "resourceLimitMarried": 3000,
+      "incomeLimitSingle": 2901,
+      "incomeLimitMarried": 5802,
+      "nursingHomeIncomeLimitSingle": 2901,
+      "nursingHomeIncomeLimitMarried": 5802,
+      "monthlyPersonalNeedsAllowance": 160,
+      "communitySpouseResourceAllowanceMin": 31584,
+      "communitySpouseResourceAllowanceMax": 157920,
+      "homeEquityLimit": 713000,
+      "averageNursingHomeCost": 10458,
+      "monthlyMaintenanceNeedsAllowanceMin": 3948,
+      "monthlyMaintenanceNeedsAllowanceMax": 3948
+    },
+    "california": {
+      "resourceLimitSingle": null,
+      "resourceLimitMarried": null,
+      "incomeLimitSingle": 1801,
+      "incomeLimitMarried": 2433,
+      "nursingHomeIncomeLimitSingle": null,
+      "nursingHomeIncomeLimitMarried": null,
+      "monthlyPersonalNeedsAllowance": 35,
+      "communitySpouseResourceAllowanceMin": 31584,
+      "communitySpouseResourceAllowanceMax": 157920,
+      "homeEquityLimit": null,
+      "averageNursingHomeCost": 12167,
+      "monthlyMaintenanceNeedsAllowanceMin": 3948,
+      "monthlyMaintenanceNeedsAllowanceMax": 3948
+    }
+  }
