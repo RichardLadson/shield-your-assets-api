@@ -1,7 +1,7 @@
-# .gitignore
-# node_modules/
-#.env
-#.DS_Store
-#logs/
-#reports/
-#coverage/
+.gitignore
+node_modules/
+.env
+.DS_Store
+logs/
+reports/
+coverage/
