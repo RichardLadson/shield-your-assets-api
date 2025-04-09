@@ -1,7 +1,13 @@
-.gitignore
+# Dependency directories
 node_modules/
-.env
-.DS_Store
+
+# Logs and reports
 logs/
 reports/
 coverage/
+
+# Environment variables
+.env
+
+# macOS system files
+.DS_Store
