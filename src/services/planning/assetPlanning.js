@@ -1,4 +1,4 @@
-// Path: src/services/planning/assetPlanning.js
+// src/services/planning/assetPlanning.js
 const logger = require('../../config/logger');
 const { validateAllInputs } = require('../validation/inputValidation');
 const { getResourceLimit, getHomeEquityLimit, loadMedicaidRules } = require('../utils/medicaidRulesLoader');
@@ -196,6 +196,10 @@ async function medicaidAssetPlanning(clientInfo, assets, state) {
   }
 }
 
+// Export all functions for more flexibility and testability
 module.exports = {
+  assessAssetSituation,
+  determineAssetStrategies,
+  planAssetApproach,
   medicaidAssetPlanning
 };

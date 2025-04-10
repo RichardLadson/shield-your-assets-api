@@ -1,4 +1,4 @@
-// Path: src/services/planning/incomePlanning.js
+// src/services/planning/incomePlanning.js
 const logger = require('../../config/logger');
 const { validateAllInputs } = require('../validation/inputValidation');
 const { 
@@ -234,6 +234,11 @@ async function medicaidIncomePlanning(clientInfo, income, expenses, state) {
   }
 }
 
+// Export all functions for more flexibility and testability
 module.exports = {
+  assessIncomeSituation,
+  calculateShareOfCost,
+  determineIncomeStrategies,
+  planIncomeApproach,
   medicaidIncomePlanning
 };
