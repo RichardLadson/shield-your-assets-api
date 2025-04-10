@@ -1,145 +1,138 @@
-    // src/services/planning/estateRecovery.js
+// src/services/planning/estateRecovery.js
 const logger = require('../../config/logger');
+const medicaidRules = require('../../../medicaid_rules_2025.json');
 
 /**
- * Assesses the client's estate recovery risk
+ * Assesses estate recovery risk based on asset value and home ownership
  * 
  * @param {Object} assets - Client's asset data
  * @param {string} state - State of application
  * @returns {Object} Estate recovery risk assessment
  */
 function assessEstateRecoveryRisk(assets, state) {
-  logger.debug(`Assessing estate recovery risk for state ${state}`);
-  
-  // Calculate total assets
+  logger.debug(`Assessing estate recovery risk for ${state}`);
+
+  const rules = medicaidRules[state.toLowerCase()];
+  if (!rules) {
+    throw new Error(`No Medicaid rules found for state: ${state}`);
+  }
+
+  const {
+    estateRecoveryHighRiskThreshold,
+    estateRecoveryMediumRiskThreshold,
+    estateRecoveryHomeThreshold
+  } = rules;
+
+  if (
+    typeof estateRecoveryHighRiskThreshold !== 'number' ||
+    typeof estateRecoveryMediumRiskThreshold !== 'number' ||
+    typeof estateRecoveryHomeThreshold !== 'number'
+  ) {
+    throw new Error(`Missing estate recovery thresholds in rules for ${state}`);
+  }
+
   const totalAssets = Object.values(assets).reduce((a, b) => a + b, 0);
-  
-  // Determine risk level based on asset value
+  const hasHome = assets.home !== undefined && assets.home > 0;
+
   let riskLevel = "low";
-  if (totalAssets >= 200000) {
+  if (totalAssets >= estateRecoveryHighRiskThreshold) {
     riskLevel = "high";
-  } else if (totalAssets >= 50000) {
+  } else if (totalAssets >= estateRecoveryMediumRiskThreshold) {
     riskLevel = "medium";
   }
-  
+
   return {
     totalAssets,
+    hasHome,
     riskLevel,
     state
   };
 }
 
 /**
- * Determines estate recovery planning strategies based on assessment
+ * Determines estate recovery mitigation strategies based on risk
  * 
- * @param {Object} situation - Estate recovery situation from assessEstateRecoveryRisk
+ * @param {Object} riskAssessment - Result from assessEstateRecoveryRisk
+ * @param {Object} rules - Medicaid rules for the state
  * @returns {Array} Array of strategy strings
  */
-function determineEstateRecoveryStrategies(situation) {
+function determineEstateRecoveryStrategies(riskAssessment, rules) {
   logger.debug("Determining estate recovery strategies");
   const strategies = [];
-  
-  if (situation.riskLevel === "medium" || situation.riskLevel === "high") {
-    strategies.push("Consider probate estate avoidance techniques");
-    strategies.push("Explore options to convert countable assets to non-countable");
-    strategies.push("Evaluate methods to protect the home from estate recovery");
-    strategies.push("Review state-specific estate recovery rules");
+
+  const { totalAssets, hasHome, riskLevel, state } = riskAssessment;
+  const { estateRecoveryHomeThreshold } = rules;
+
+  if (riskLevel === "high") {
+    strategies.push("Consider creating an irrevocable trust to shelter assets");
+    strategies.push("Consult with an elder law attorney for advanced asset protection planning");
+  } else if (riskLevel === "medium") {
+    strategies.push("Evaluate converting assets into exempt forms (e.g. annuities)");
+    strategies.push("Consider gifting strategies within allowable Medicaid guidelines");
+  } else {
+    strategies.push("Maintain current asset structure with annual reviews");
   }
-  
-  if (situation.riskLevel === "high") {
-    strategies.push("Investigate lifetime transfer strategies");
-    strategies.push("Consider advanced legal planning with elder law attorney");
+
+  if (hasHome && totalAssets >= estateRecoveryHomeThreshold) {
+    strategies.push("Explore strategies to protect the home from estate recovery");
   }
-  
+
   return strategies;
 }
 
 /**
- * Creates a detailed estate recovery planning approach
+ * Builds a detailed estate recovery planning approach
  * 
- * @param {Array} strategies - Strategies from determineEstateRecoveryStrategies
- * @param {Object} situation - Estate recovery situation from assessEstateRecoveryRisk
+ * @param {Array} strategies - Recommended planning strategies
+ * @param {Object} assessment - Risk assessment object
  * @returns {string} Formatted estate recovery planning approach
  */
-function planEstateRecoveryApproach(strategies, situation) {
-  logger.debug("Planning estate recovery approach");
-  
-  let approach = `Estate Recovery Planning Approach for ${situation.state}:\n`;
-  approach += `Risk Level: ${situation.riskLevel.toUpperCase()}\n`;
-  approach += `Total Assets: $${situation.totalAssets.toFixed(2)}\n\n`;
-  
-  if (strategies.length > 0) {
-    approach += "Recommended Strategies:\n";
-    
-    strategies.forEach(strategy => {
-      if (strategy.includes("probate estate avoidance")) {
-        approach += "- Consider probate estate avoidance techniques:\n";
-        approach += "  * Review titling of assets to avoid probate\n";
-        approach += "  * Explore pay-on-death designations for accounts\n";
-        approach += "  * Consider transfer-on-death deeds where available\n";
-      } else if (strategy.includes("convert countable assets")) {
-        approach += "- Explore options to convert countable assets to non-countable or protected assets:\n";
-        approach += "  * Evaluate exempt transfers to certain family members\n";
-        approach += "  * Consider home improvements or modifications\n";
-        approach += "  * Explore purchasing exempt assets that benefit the Medicaid recipient\n";
-      } else if (strategy.includes("protect the home")) {
-        approach += "- Evaluate methods to protect the home from estate recovery:\n";
-        approach += "  * Investigate life estate deeds with powers\n";
-        approach += "  * Consider lady bird deeds in states where available\n";
-        approach += "  * Explore caregiver child exemption if applicable\n";
-      } else if (strategy.includes("state-specific")) {
-        approach += "- Review state-specific estate recovery rules:\n";
-        approach += `  * Understand ${situation.state}'s specific recovery policies\n`;
-        approach += "  * Identify potential exemptions or hardship waivers\n";
-        approach += "  * Stay informed about legislative changes affecting recovery\n";
-      } else if (strategy.includes("lifetime transfer")) {
-        approach += "- Investigate lifetime transfer strategies:\n";
-        approach += "  * Consider irrevocable trusts (accounting for 5-year lookback)\n";
-        approach += "  * Evaluate partial interest transfers\n";
-        approach += "  * Review homestead protection options\n";
-      } else if (strategy.includes("advanced legal planning")) {
-        approach += "- Consider advanced legal planning with elder law attorney:\n";
-        approach += "  * Develop comprehensive estate and Medicaid planning strategy\n";
-        approach += "  * Ensure coordination of all planning documents\n";
-        approach += "  * Address potential family dynamics issues proactively\n";
-      }
-    });
-  } else {
-    approach += "At the current asset level, estate recovery risk is low. However, continue to monitor:\n";
-    approach += "- Changes in state estate recovery policies\n";
-    approach += "- Any increases in assets through inheritances or other sources\n";
-    approach += "- Changes in family situation that might affect recovery exemptions\n";
-  }
-  
-  approach += "\nConsult with an elder law attorney to finalize your estate recovery plan.";
+function planEstateRecoveryApproach(strategies, assessment) {
+  logger.debug("Building estate recovery planning approach");
+  let approach = "Estate Recovery Planning Approach:\n\n";
+
+  approach += `- Total Assets: $${assessment.totalAssets.toFixed(2)}\n`;
+  approach += `- Risk Level: ${assessment.riskLevel.toUpperCase()}\n`;
+  approach += `- Home Ownership: ${assessment.hasHome ? "Yes" : "No"}\n\n`;
+
+  approach += "Recommended Strategies:\n";
+  strategies.forEach(strategy => {
+    approach += `- ${strategy}\n`;
+  });
+
+  approach += "\nImportant Considerations:\n";
+  approach += "- Medicaid estate recovery applies to certain assets after the recipient's death\n";
+  approach += "- Some states expand recovery beyond mandatory limits — check your local laws\n";
+  approach += `- Always consult with a qualified elder law attorney in ${assessment.state}\n`;
+
   return approach;
 }
 
 /**
  * Complete estate recovery planning workflow
  * 
- * @param {Object} clientInfo - Client demographic information (not directly used but maintained for consistency)
+ * @param {Object} clientInfo - Client demographic information (not directly used)
  * @param {Object} assets - Client's asset data
  * @param {string} state - The state of application
  * @returns {Promise<Object>} Complete estate recovery planning result
  */
 async function medicaidEstateRecoveryPlanning(clientInfo, assets, state) {
-  logger.info(`Starting Medicaid estate recovery planning for ${state}`);
-  
+  logger.info(`Starting estate recovery planning for ${state}`);
+
   try {
-    // Assess estate recovery risk
-    const situation = assessEstateRecoveryRisk(assets, state);
-    
-    // Determine strategies
-    const strategies = determineEstateRecoveryStrategies(situation);
-    
-    // Create detailed plan
-    const approach = planEstateRecoveryApproach(strategies, situation);
-    
+    const rules = medicaidRules[state.toLowerCase()];
+    if (!rules) {
+      throw new Error(`No Medicaid rules found for state: ${state}`);
+    }
+
+    const riskAssessment = assessEstateRecoveryRisk(assets, state);
+    const strategies = determineEstateRecoveryStrategies(riskAssessment, rules);
+    const approach = planEstateRecoveryApproach(strategies, riskAssessment);
+
     logger.info('Estate recovery planning completed successfully');
-    
+
     return {
-      situation,
+      riskAssessment,
       strategies,
       approach,
       status: 'success'

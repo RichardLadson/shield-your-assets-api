@@ -37,7 +37,7 @@ const {
     getHomeEquityLimit: jest.fn().mockResolvedValue(730000)
   }));
   
-  jest.mock('../../eligibility/eligibilityUtils', () => ({
+  jest.mock('../../../eligibility/eligibilityUtils', () => ({
     classifyAssets: jest.fn().mockReturnValue({
       countableAssets: 5000,
       nonCountableAssets: 150000

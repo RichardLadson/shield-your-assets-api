@@ -1,5 +1,6 @@
 // src/services/planning/relatedBenefits.js
 const logger = require('../../config/logger');
+const medicaidRules = require('../../../medicaid_rules_2025.json');
 
 /**
  * Assesses the client's eligibility for related benefits
@@ -12,23 +13,25 @@ const logger = require('../../config/logger');
  */
 function assessBenefitEligibility(clientInfo, assets, income, state) {
   logger.debug("Assessing related benefits eligibility");
-  
-  // Extract client information for benefit eligibility checks
+
+  const rules = medicaidRules[state.toLowerCase()];
+  if (!rules) {
+    throw new Error(`Medicaid rules not found for state: ${state}`);
+  }
+
   const age = clientInfo.age || 0;
   const veteran = clientInfo.veteran || false;
   const hasLTCInsurance = clientInfo.hasLTCInsurance || false;
   const needsHomeCare = clientInfo.needsHomeCare || false;
   const needsNursingHomeCare = clientInfo.needsNursingHomeCare || false;
-  
-  // Calculate total income for Medicare Savings Program check
+
   const totalIncome = Object.values(income).reduce((a, b) => a + b, 0);
-  
-  // Determine eligibility for various programs
+
   return {
     socialSecurity: age >= 62,
     vaImprovedPension: veteran,
     ltcInsurance: hasLTCInsurance,
-    medicareSavingsProgram: totalIncome < 1500, // Example threshold
+    medicareSavingsProgram: totalIncome < rules.incomeLimitSingle,
     hcbsWaiver: needsHomeCare,
     pace: age >= 55 && needsNursingHomeCare
   };
@@ -43,31 +46,31 @@ function assessBenefitEligibility(clientInfo, assets, income, state) {
 function determineBenefitStrategies(eligibility) {
   logger.debug("Determining benefit strategies");
   const strategies = [];
-  
+
   if (eligibility.socialSecurity) {
     strategies.push("Evaluate Social Security claiming options");
   }
-  
+
   if (eligibility.vaImprovedPension) {
     strategies.push("Explore VA Improved Pension eligibility and application");
   }
-  
+
   if (eligibility.ltcInsurance) {
     strategies.push("Coordinate long-term care insurance benefits with Medicaid planning");
   }
-  
+
   if (eligibility.medicareSavingsProgram) {
     strategies.push("Apply for an appropriate Medicare Savings Program");
   }
-  
+
   if (eligibility.hcbsWaiver) {
     strategies.push("Investigate Home and Community Based Services waiver programs");
   }
-  
+
   if (eligibility.pace) {
     strategies.push("Explore PACE (Program of All-inclusive Care for the Elderly)");
   }
-  
+
   return strategies;
 }
 
@@ -81,9 +84,9 @@ function determineBenefitStrategies(eligibility) {
 function planBenefitApproach(strategies, eligibility) {
   logger.debug("Planning related benefits approach");
   let approach = "Related Benefits Planning Approach:\n\n";
-  
+
   approach += "Based on the client's situation, the following benefit programs should be considered:\n";
-  
+
   strategies.forEach(strategy => {
     if (strategy.includes("Social Security")) {
       approach += "- Social Security Benefits:\n";
@@ -117,12 +120,12 @@ function planBenefitApproach(strategies, eligibility) {
       approach += "  * Understand how PACE would coordinate with other benefits\n";
     }
   });
-  
+
   approach += "\nNext Steps:\n";
   approach += "- Prioritize application for these benefits based on urgency and potential impact\n";
   approach += "- Coordinate timing of applications to optimize overall benefits\n";
   approach += "- Consult with specialists for each benefit program as needed\n";
-  
+
   return approach;
 }
 
@@ -137,19 +140,19 @@ function planBenefitApproach(strategies, eligibility) {
  */
 async function medicaidRelatedBenefitsPlanning(clientInfo, assets, income, state) {
   logger.info(`Starting related benefits planning for ${state}`);
-  
+
   try {
-    // Assess benefit eligibility
+    const rules = medicaidRules[state.toLowerCase()];
+    if (!rules) {
+      throw new Error(`No Medicaid rules found for state: ${state}`);
+    }
+
     const eligibility = assessBenefitEligibility(clientInfo, assets, income, state);
-    
-    // Determine strategies
     const strategies = determineBenefitStrategies(eligibility);
-    
-    // Create detailed plan
     const approach = planBenefitApproach(strategies, eligibility);
-    
+
     logger.info('Related benefits planning completed successfully');
-    
+
     return {
       eligibility,
       strategies,

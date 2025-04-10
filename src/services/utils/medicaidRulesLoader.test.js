@@ -18,7 +18,7 @@ jest.mock('fs', () => ({
 }));
 
 // Mock the logger
-jest.mock('../../../config/logger', () => ({
+jest.mock('../../../../config/logger', () => ({
   debug: jest.fn(),
   info: jest.fn(),
   warn: jest.fn(),

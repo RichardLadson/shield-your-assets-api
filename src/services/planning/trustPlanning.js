@@ -1,122 +1,126 @@
 // src/services/planning/trustPlanning.js
 const logger = require('../../config/logger');
+const medicaidRules = require('../../../medicaid_rules_2025.json');
 
 /**
- * Assesses the client's trust planning situation
+ * Assesses whether trust planning is necessary based on asset limits
  * 
- * @param {Object} clientInfo - Client demographic information
  * @param {Object} assets - Client's asset data
  * @param {string} state - State of application
- * @returns {Object} Trust situation assessment
+ * @param {Object} rules - Medicaid rules for the state
+ * @returns {Object} Trust planning situation
  */
-function assessTrustSituation(clientInfo, assets, state) {
-  logger.debug(`Assessing trust situation for ${clientInfo.name}`);
-  
-  // Calculate countable and total assets
+function assessTrustSituation(assets, state, rules) {
+  logger.debug(`Assessing trust planning situation for ${state}`);
+
+  if (typeof rules.assetLimitSingle !== 'number') {
+    throw new Error(`Missing asset limit value for state: ${state}`);
+  }
+
   const countableAssets = assets.countable || 0;
-  const totalAssets = (assets.countable || 0) + (assets.non_countable || 0);
-  
-  // Check for disability-related factors
-  // In a real implementation, these would be properties of clientInfo
-  const hasDisabledChild = clientInfo.hasDisabledChild || false;
-  const hasDisabledUnder65 = clientInfo.hasDisabledUnder65 || false;
-  
+  const nonCountableAssets = assets.non_countable || 0;
+  const totalAssets = countableAssets + nonCountableAssets;
+  const excessAssets = Math.max(0, countableAssets - rules.assetLimitSingle);
+
   return {
-    totalAssets,
     countableAssets,
-    hasDisabledChild,
-    hasDisabledUnder65,
+    nonCountableAssets,
+    totalAssets,
+    excessAssets,
     state
   };
 }
 
 /**
- * Determines trust planning strategies based on assessment
+ * Determines appropriate trust strategies
  * 
- * @param {Object} situation - Trust situation from assessTrustSituation
- * @returns {Array} Array of strategy strings
+ * @param {Object} situation - Trust assessment
+ * @returns {Array} Array of trust-related strategy recommendations
  */
 function determineTrustStrategies(situation) {
   logger.debug("Determining trust strategies");
   const strategies = [];
-  
-  // Determine appropriate trust strategies based on situation
-  if (situation.countableAssets > 2000) {
-    strategies.push("Evaluate self-settled irrevocable trust options");
+
+  if (situation.excessAssets > 0) {
+    strategies.push("Consider self-settled special needs trust for disabled individual");
+    strategies.push("Explore use of irrevocable Medicaid asset protection trust");
+    strategies.push("Investigate pooled income trust where applicable");
   }
-  
-  if (situation.hasDisabledChild) {
-    strategies.push("Consider a trust for the sole benefit of a disabled child");
-  }
-  
-  if (situation.hasDisabledUnder65) {
-    strategies.push("Consider a trust for the sole benefit of a disabled person under 65");
-  }
-  
-  // Always consider a Miller Trust for income management
-  strategies.push("Consider Qualified Income Trust (Miller Trust)");
-  
+
   return strategies;
 }
 
 /**
- * Creates a detailed trust planning approach
+ * Builds the trust planning narrative
  * 
- * @param {Array} strategies - Strategies from determineTrustStrategies
- * @param {Object} situation - Trust situation from assessTrustSituation
- * @returns {string} Formatted trust planning approach
+ * @param {Array} strategies - Strategy recommendations
+ * @param {Object} situation - Trust situation context
+ * @returns {string} Narrative guidance for planning
  */
 function planTrustApproach(strategies, situation) {
-  logger.debug("Planning trust approach");
-  let approach = "Trust Planning Approach:\n";
-  
-  for (const strategy of strategies) {
-    if (strategy.includes("irrevocable trust")) {
-      approach += "- Consider establishing a self-settled irrevocable trust to protect assets.\n";
-      approach += `  * This might help protect up to $${situation.countableAssets.toFixed(2)} of countable assets.\n`;
-      approach += "  * Plan for the 5-year lookback period for asset transfers to the trust.\n";
-    } else if (strategy.includes("disabled child")) {
-      approach += "- Establish a trust solely for the benefit of a disabled child.\n";
-      approach += "  * This is an exempt transfer that does not trigger a penalty period.\n";
-      approach += "  * Ensure the trust meets specific Medicaid requirements.\n";
-    } else if (strategy.includes("disabled person under 65")) {
-      approach += "- Explore trust options for disabled persons under 65.\n";
-      approach += "  * Consider a d4A or d4C special needs trust based on circumstances.\n";
-      approach += "  * These trusts allow the disabled person to maintain benefits eligibility.\n";
-    } else if (strategy.includes("Miller Trust")) {
-      approach += "- Evaluate the need for a Miller Trust based on income levels.\n";
-      approach += "  * This trust helps manage excess income above the Medicaid income cap.\n";
-      approach += `  * Particularly relevant in ${situation.state} for income management.\n`;
-    }
+  logger.debug("Building trust planning approach");
+
+  if (strategies.length === 0) {
+    return "No trust-based asset protection strategies are required at this time.";
   }
-  
-  approach += "\nConsult with an elder law attorney for personalized trust planning recommendations.";
+
+  let approach = "Trust Planning Approach:\n\n";
+
+  strategies.forEach(strategy => {
+    if (strategy.includes("special needs trust")) {
+      approach += "- Self-Settled Special Needs Trust:\n";
+      approach += "  * Available to individuals under age 65 who are disabled.\n";
+      approach += "  * Trust must be irrevocable and administered by a third party.\n";
+      approach += "  * Must name the state Medicaid agency as primary remainder beneficiary.\n\n";
+    }
+
+    if (strategy.includes("irrevocable")) {
+      approach += "- Irrevocable Medicaid Asset Protection Trust:\n";
+      approach += "  * Transfer assets into trust to remove them from countable estate.\n";
+      approach += "  * 5-year lookback period applies.\n";
+      approach += "  * Trustee cannot be the applicant.\n";
+      approach += "  * Useful for estate planning and long-term protection.\n\n";
+    }
+
+    if (strategy.includes("pooled income trust")) {
+      approach += "- Pooled Income Trust:\n";
+      approach += "  * Useful for individuals over income or asset limits who are disabled.\n";
+      approach += "  * Funds can be used for supplemental needs.\n";
+      approach += "  * Administered by non-profit and must comply with Medicaid requirements.\n\n";
+    }
+  });
+
+  approach += "Key Considerations:\n";
+  approach += "- Trusts must be properly structured to avoid Medicaid penalties.\n";
+  approach += "- Timing and documentation of transfers is critical.\n";
+  approach += `- Review trust language with an elder law attorney familiar with ${situation.state} Medicaid rules.\n`;
+
   return approach;
 }
 
 /**
  * Complete trust planning workflow
  * 
- * @param {Object} clientInfo - Client demographic information
+ * @param {Object} clientInfo - Client demographic data (not used here)
  * @param {Object} assets - Client's asset data
- * @param {string} state - The state of application
- * @returns {Promise<Object>} Complete trust planning result
+ * @param {string} state - State of application
+ * @returns {Promise<Object>} Trust planning output
  */
 async function medicaidTrustPlanning(clientInfo, assets, state) {
   logger.info(`Starting Medicaid trust planning for ${state}`);
-  
+
   try {
-    // Assess trust situation
-    const situation = assessTrustSituation(clientInfo, assets, state);
-    
-    // Determine strategies
+    const rules = medicaidRules[state.toLowerCase()];
+    if (!rules) {
+      throw new Error(`No Medicaid rules found for state: ${state}`);
+    }
+
+    const situation = assessTrustSituation(assets, state, rules);
     const strategies = determineTrustStrategies(situation);
-    
-    // Create detailed plan
     const approach = planTrustApproach(strategies, situation);
-    
+
     logger.info('Trust planning completed successfully');
-    
+
     return {
       situation,
       strategies,

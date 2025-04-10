@@ -1,144 +1,143 @@
-// src/services/planning/eligibilityAssessment.js
+// src/services/eligibility/eligibilityAssessment.js
 const logger = require('../../config/logger');
+const medicaidRules = require('../../../medicaid_rules_2025.json');
 
 /**
- * Assesses resource and income eligibility for Medicaid
+ * Assesses Medicaid eligibility based on client income and assets
  * 
- * @param {Object} clientInfo - Client demographic information
- * @param {Object} assets - Client's asset data
- * @param {Object} income - Client's income data
- * @param {string} state - The state of application
- * @param {string} maritalStatus - Client's marital status
+ * @param {Object} clientInfo - Demographics including marital status
+ * @param {Object} assets - Asset breakdown
+ * @param {Object} income - Income breakdown
+ * @param {string} state - State of application
  * @returns {Object} Eligibility assessment result
  */
-function assessEligibility(clientInfo, assets, income, state, maritalStatus) {
-  logger.debug(`Assessing eligibility for ${clientInfo.name} in ${state}`);
+function assessEligibility(clientInfo, assets, income, state, rules) {
+  logger.debug(`Assessing eligibility for ${state}`);
 
-  // Determine countable assets
+  const maritalStatus = clientInfo.maritalStatus?.toLowerCase() || "single";
+
+  const resourceLimit =
+    maritalStatus === "married" ? rules.assetLimitMarried : rules.assetLimitSingle;
+
+  const incomeLimit =
+    maritalStatus === "married" ? rules.incomeLimitMarried : rules.incomeLimitSingle;
+
+  if (typeof resourceLimit !== "number" || typeof incomeLimit !== "number") {
+    throw new Error(`Missing asset or income limits for ${state}`);
+  }
+
   const countableAssets = assets.countable || 0;
-
-  // Define resource limit based on marital status
-  const resourceLimit = maritalStatus === "single" ? 2000 : 3000;
-  const isResourceEligible = countableAssets <= resourceLimit;
-  const spenddownAmount = Math.max(0, countableAssets - resourceLimit);
-
-  // Calculate total income
   const totalIncome = Object.values(income).reduce((a, b) => a + b, 0);
-  
-  // Check income eligibility
-  const incomeLimit = 2349; // Example limit - in production would come from rules data
+
+  const isResourceEligible = countableAssets <= resourceLimit;
   const isIncomeEligible = totalIncome <= incomeLimit;
 
-  return { 
-    isResourceEligible, 
-    spenddownAmount, 
-    isIncomeEligible, 
-    totalIncome,
+  return {
+    isResourceEligible,
+    isIncomeEligible,
+    resourceLimit,
     incomeLimit,
-    resourceLimit
+    countableAssets,
+    totalIncome,
+    maritalStatus,
+    state
   };
 }
 
 /**
- * Determines eligibility strategies based on assessment
+ * Determines strategies to improve eligibility
  * 
- * @param {Object} eligibilityResult - Result from assessEligibility
- * @returns {Array} Array of strategy strings
+ * @param {Object} assessment - Result of assessEligibility
+ * @returns {Array} Strategy list
  */
-function determineEligibilityStrategies(eligibilityResult) {
+function determineEligibilityStrategies(assessment) {
   logger.debug("Determining eligibility strategies");
-  
+
   const strategies = [];
-  
-  if (!eligibilityResult.isResourceEligible) {
-    strategies.push(`Reduce countable assets by $${eligibilityResult.spenddownAmount.toFixed(2)}`);
-    strategies.push("Convert countable assets to exempt assets");
+
+  if (!assessment.isResourceEligible) {
+    strategies.push("Reduce countable assets through exempt purchases or annuities");
+    strategies.push("Transfer excess assets to a community spouse if allowed");
+    strategies.push("Consider setting up a Medicaid asset protection trust");
   }
-  
-  if (!eligibilityResult.isIncomeEligible) {
-    strategies.push("Evaluate income management strategies");
-    strategies.push("Consider Qualified Income Trust (Miller Trust)");
+
+  if (!assessment.isIncomeEligible) {
+    strategies.push("Establish a Qualified Income Trust (Miller Trust) for excess income");
+    strategies.push("Use income to pay down medical expenses and care liability");
   }
-  
+
   return strategies;
 }
 
 /**
- * Creates a detailed eligibility plan based on assessment and strategies
+ * Creates a formatted eligibility plan
  * 
- * @param {Array} strategies - Strategies from determineEligibilityStrategies
- * @param {Object} eligibilityResult - Result from assessEligibility
- * @returns {string} Formatted eligibility plan
+ * @param {Array} strategies - Strategy list
+ * @param {Object} assessment - Eligibility context
+ * @returns {string} Planning narrative
  */
-function planEligibilityApproach(strategies, eligibilityResult) {
-  logger.debug("Planning eligibility approach");
-  
-  let approach = "Medicaid Eligibility Assessment:\n";
-  
-  // Resource eligibility section
-  approach += "\nResource Eligibility:\n";
-  approach += `Resource Limit: $${eligibilityResult.resourceLimit.toFixed(2)}\n`;
-  approach += `Current Status: ${eligibilityResult.isResourceEligible ? 'ELIGIBLE' : 'NOT ELIGIBLE'}\n`;
-  
-  if (!eligibilityResult.isResourceEligible) {
-    approach += `Spenddown Amount Needed: $${eligibilityResult.spenddownAmount.toFixed(2)}\n`;
-  }
-  
-  // Income eligibility section
-  approach += "\nIncome Eligibility:\n";
-  approach += `Income Limit: $${eligibilityResult.incomeLimit.toFixed(2)}\n`;
-  approach += `Total Income: $${eligibilityResult.totalIncome.toFixed(2)}\n`;
-  approach += `Current Status: ${eligibilityResult.isIncomeEligible ? 'ELIGIBLE' : 'NOT ELIGIBLE'}\n`;
-  
-  // Strategies section
-  if (strategies.length > 0) {
-    approach += "\nRecommended Strategies:\n";
-    strategies.forEach(strategy => {
-      approach += `- ${strategy}\n`;
+function planEligibilityApproach(strategies, assessment) {
+  logger.debug("Building eligibility approach");
+
+  let plan = "Eligibility Plan:\n\n";
+
+  plan += `- Countable Assets: $${assessment.countableAssets.toFixed(2)} (Limit: $${assessment.resourceLimit})\n`;
+  plan += `- Total Income: $${assessment.totalIncome.toFixed(2)} (Limit: $${assessment.incomeLimit})\n`;
+  plan += `- Resource Eligible: ${assessment.isResourceEligible ? "YES" : "NO"}\n`;
+  plan += `- Income Eligible: ${assessment.isIncomeEligible ? "YES" : "NO"}\n\n`;
+
+  if (strategies.length === 0) {
+    plan += "The client currently meets both income and asset eligibility requirements.\n";
+  } else {
+    plan += "Recommended Strategies:\n";
+    strategies.forEach((s) => {
+      plan += `- ${s}\n`;
     });
   }
-  
-  return approach;
+
+  plan += "\nKey Considerations:\n";
+  plan += "- Medicaid financial eligibility is based on monthly income and countable resources.\n";
+  plan += "- Eligibility criteria may vary by program type and waiver availability.\n";
+  plan += `- Consult with a Medicaid planner or elder law attorney in ${assessment.state} for further guidance.\n`;
+
+  return plan;
 }
 
 /**
- * Complete eligibility assessment workflow
+ * Complete Medicaid eligibility planning workflow
  * 
- * @param {Object} clientInfo - Client demographic information
- * @param {Object} assets - Client's asset data
- * @param {Object} income - Client's income data
- * @param {string} state - The state of application
- * @param {string} maritalStatus - Client's marital status
- * @returns {Object} Complete eligibility assessment result with plan
+ * @param {Object} clientInfo - Client demographics
+ * @param {Object} assets - Client's assets
+ * @param {Object} income - Client's income
+ * @param {string} state - State of application
+ * @returns {Promise<Object>} Eligibility assessment result
  */
-async function medicaidEligibilityAssessment(clientInfo, assets, income, state, maritalStatus) {
-  logger.info(`Starting Medicaid eligibility assessment for ${state}`);
-  
+async function medicaidEligibilityAssessment(clientInfo, assets, income, state) {
+  logger.info(`Starting eligibility assessment for ${state}`);
+
   try {
-    // In a production version, you'd load rules and validate inputs here
-    
-    // Assess eligibility
-    const eligibilityResult = assessEligibility(clientInfo, assets, income, state, maritalStatus);
-    
-    // Determine strategies
-    const eligibilityStrategies = determineEligibilityStrategies(eligibilityResult);
-    
-    // Create plan
-    const eligibilityPlan = planEligibilityApproach(eligibilityStrategies, eligibilityResult);
-    
-    logger.info('Eligibility assessment completed successfully');
-    
+    const rules = medicaidRules[state.toLowerCase()];
+    if (!rules) {
+      throw new Error(`No Medicaid rules found for state: ${state}`);
+    }
+
+    const assessment = assessEligibility(clientInfo, assets, income, state, rules);
+    const strategies = determineEligibilityStrategies(assessment);
+    const eligibilityPlan = planEligibilityApproach(strategies, assessment);
+
+    logger.info("Eligibility assessment completed successfully");
+
     return {
-      eligibilityResult,
-      eligibilityStrategies,
+      eligibilityResult: assessment,
+      eligibilityStrategies: strategies,
       eligibilityPlan,
-      status: 'success'
+      status: "success"
     };
   } catch (error) {
     logger.error(`Error in eligibility assessment: ${error.message}`);
     return {
       error: `Eligibility assessment error: ${error.message}`,
-      status: 'error'
+      status: "error"
     };
   }
 }
