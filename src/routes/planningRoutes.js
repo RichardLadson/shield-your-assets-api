@@ -10,5 +10,8 @@ router.post('/comprehensive', planningController.comprehensivePlanning);
 router.post('/asset', planningController.assetPlanning);
 router.post('/income', planningController.incomePlanning);
 router.post('/trust', planningController.trustPlanning);
+router.post('/annuity', planningController.annuityPlanning);
+router.post('/divestment', planningController.divestmentPlanning);
+router.post('/care', planningController.carePlanning);
 
 module.exports = router;
