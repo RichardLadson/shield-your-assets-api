@@ -1,6 +1,6 @@
 // src/services/planning/estateRecovery.js
 const logger = require('../../config/logger');
-const medicaidRules = require('../../../medicaid_rules_2025.json');
+const medicaidRules = require('../../data/medicaid_rules_2025.json');
 
 /**
  * Assesses estate recovery risk based on asset value and home ownership

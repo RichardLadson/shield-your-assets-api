@@ -1,6 +1,6 @@
 // src/services/planning/applicationPlanning.js
 const logger = require('../../config/logger');
-const medicaidRules = require('../../../medicaid_rules_2025.json');
+const medicaidRules = require('../../data/medicaid_rules_2025.json');
 
 /**
  * Plans the Medicaid application approach based on client information

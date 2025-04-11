@@ -1,6 +1,6 @@
 // src/services/planning/carePlanning.js
 const logger = require('../../config/logger');
-const medicaidRules = require('../../../medicaid_rules_2025.json');
+const medicaidRules = require('../../data/medicaid_rules_2025.json');
 
 /**
  * Assesses the client’s care needs based on medical and living information

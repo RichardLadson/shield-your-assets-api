@@ -1,6 +1,6 @@
 // src/services/eligibility/eligibilityAssessment.js
 const logger = require('../../config/logger');
-const medicaidRules = require('../../../medicaid_rules_2025.json');
+const medicaidRules = require('../../data/medicaid_rules_2025.json');
 
 /**
  * Assesses Medicaid eligibility based on client income and assets

@@ -43,16 +43,15 @@ describe('Medicaid Rules Loader', () => {
   };
 
   beforeEach(() => {
-    // Reset all mocks
     jest.clearAllMocks();
-    
-    // Mock successful file access
+
+    // Simulate accessible file
     fs.access.mockResolvedValue(undefined);
-    
-    // Mock file stats
+
+    // Simulate file stat
     fs.stat.mockResolvedValue({ mtimeMs: 123456789 });
-    
-    // Mock file read
+
+    // Simulate valid rules data
     fs.readFile.mockResolvedValue(JSON.stringify(sampleRulesData));
   });
 
@@ -65,13 +64,11 @@ describe('Medicaid Rules Loader', () => {
 
     test('should handle file not found', async () => {
       fs.access.mockRejectedValue(new Error('File not found'));
-      
       await expect(loadMedicaidRules()).rejects.toThrow('Rules file not found');
     });
 
     test('should handle invalid JSON', async () => {
       fs.readFile.mockResolvedValue('invalid json');
-      
       await expect(loadMedicaidRules()).rejects.toThrow('Invalid JSON format');
     });
   });
@@ -119,7 +116,7 @@ describe('Medicaid Rules Loader', () => {
 
     test('should use default for null value', async () => {
       const result = await getResourceLimit('California', 'single', sampleRulesData);
-      expect(result).toBe(2000); // Default value
+      expect(result).toBe(2000); // Fallback default
     });
   });
 });

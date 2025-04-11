@@ -1,6 +1,6 @@
 // src/services/planning/trustPlanning.js
 const logger = require('../../config/logger');
-const medicaidRules = require('../../../medicaid_rules_2025.json');
+const medicaidRules = require('../../data/medicaid_rules_2025.json');
 
 /**
  * Assesses whether trust planning is necessary based on asset limits
