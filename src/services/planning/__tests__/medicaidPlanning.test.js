@@ -1,233 +1,519 @@
 // src/services/planning/__tests__/medicaidPlanning.test.js
 
-const {
-  medicaidPlanning,
-  generateMedicaidPlanningReport
-} = require('../medicaidPlanning');
+const { medicaidPlanning } = require('../medicaidPlanning');
 
-// Mock the dependencies
-jest.mock('../../../config/logger', () => ({
-  debug: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn()
-}));
-
-// Mock the validation service
-jest.mock('../../validation/inputValidation', () => ({
-  validateAllInputs: jest.fn().mockResolvedValue({
-    valid: true,
-    message: 'All inputs are valid',
-    normalizedData: {
-      clientInfo: { name: 'Test Client', age: 75, maritalStatus: 'single' },
-      assets: { countable: 5000, home: 150000 },
-      income: { social_security: 1500, pension: 800 },
-      expenses: { health_insurance: 200 },
-      state: 'florida'
-    }
-  })
-}));
-
-// Mock the rules loader
-jest.mock('../../utils/medicaidRulesLoader', () => ({
-  loadMedicaidRules: jest.fn().mockResolvedValue({
-    florida: {
-      resourceLimitSingle: 2000,
-      homeEquityLimit: 730000
-    }
-  })
-}));
-
-// Mock all the planning modules
+// Mock all dependent modules
 jest.mock('../carePlanning', () => ({
-  medicaidCarePlanning: jest.fn().mockResolvedValue({
-    careNeeds: { recommendedCareLevel: 'nursing' },
-    strategies: ['Plan for skilled nursing facility placement'],
-    approach: 'Care Planning Approach...',
-    status: 'success'
+  assessCareNeeds: jest.fn(),
+  recommendCareSettings: jest.fn(),
+  carePlanning: jest.fn().mockResolvedValue({
+    status: 'success',
+    careNeeds: {
+      recommendedCareLevel: 'nursing'
+    },
+    recommendations: ['Consider nursing facility care']
   })
 }));
 
 jest.mock('../eligibilityAssessment', () => ({
-  medicaidEligibilityAssessment: jest.fn().mockResolvedValue({
-    eligibilityResult: { isResourceEligible: false, isIncomeEligible: true },
-    eligibilityStrategies: ['Reduce countable assets'],
-    eligibilityPlan: 'Eligibility Plan...',
-    status: 'success'
-  })
-}));
-
-jest.mock('../relatedBenefits', () => ({
-  medicaidRelatedBenefitsPlanning: jest.fn().mockResolvedValue({
-    eligibility: { socialSecurity: true, vaImprovedPension: true },
-    strategies: ['Explore VA benefits'],
-    approach: 'Related Benefits Approach...',
-    status: 'success'
+  assessIncome: jest.fn(),
+  assessAssets: jest.fn(),
+  assessEligibility: jest.fn(),
+  eligibilityAssessment: jest.fn().mockResolvedValue({
+    status: 'success',
+    isResourceEligible: false,
+    isIncomeEligible: true,
+    excessResources: 98000,
+    resourceLimit: 2000,
+    strategies: ['Reduce countable assets']
   })
 }));
 
 jest.mock('../assetPlanning', () => ({
+  analyzeAssets: jest.fn(),
   medicaidAssetPlanning: jest.fn().mockResolvedValue({
-    situation: { countableAssets: 5000, excessAssets: 3000 },
-    strategies: ['Convert countable assets'],
-    approach: 'Asset Planning Approach...',
-    status: 'success'
+    status: 'success',
+    strategies: ['Transfer home to spouse', 'Spend down on exempt assets'],
+    implementation: ['Consult elder law attorney']
   })
 }));
 
 jest.mock('../incomePlanning', () => ({
+  analyzeIncome: jest.fn(),
   medicaidIncomePlanning: jest.fn().mockResolvedValue({
-    incomeSituation: { totalIncome: 2300, incomeLimit: 2901 },
-    strategies: ['Monitor income'],
-    approach: 'Income Planning Approach...',
-    status: 'success'
-  })
-}));
-
-jest.mock('../trustPlanning', () => ({
-  medicaidTrustPlanning: jest.fn().mockResolvedValue({
-    strategies: ['Consider self-settled trust'],
-    approach: 'Trust Planning Approach...',
-    status: 'success'
+    status: 'success',
+    strategies: ['Establish Qualified Income Trust'],
+    implementation: ['Set up income trust with attorney assistance']
   })
 }));
 
 jest.mock('../annuityPlanning', () => ({
-  medicaidAnnuityPlanning: jest.fn().mockResolvedValue({
-    strategies: ['Evaluate half-a-loaf with annuity'],
-    approach: 'Annuity Planning Approach...',
-    status: 'success'
+  assessAnnuityOptions: jest.fn(),
+  annuityPlanning: jest.fn().mockResolvedValue({
+    status: 'success',
+    isAppropriate: true,
+    strategies: ['Purchase Medicaid-compliant annuity'],
+    recommendations: ['Convert IRA to annuity']
+  })
+}));
+
+jest.mock('../trustPlanning', () => ({
+  assessTrustNeeds: jest.fn(),
+  trustPlanning: jest.fn().mockResolvedValue({
+    status: 'success',
+    needsAssessment: { needsTrust: true },
+    recommendations: ['Set up irrevocable trust']
   })
 }));
 
 jest.mock('../divestmentPlanning', () => ({
-  medicaidDivestmentPlanning: jest.fn().mockResolvedValue({
-    strategies: ['Consider Reverse Half-a-Loaf strategy'],
-    approach: 'Divestment Planning Approach...',
-    status: 'success'
+  analyzePastTransfers: jest.fn(),
+  divestmentPlanning: jest.fn().mockResolvedValue({
+    status: 'success',
+    penaltyPeriodEstimate: 0,
+    strategies: ['No problematic past transfers identified']
   })
 }));
 
 jest.mock('../communitySpousePlanning', () => ({
-  medicaidCommunitySpousePlanning: jest.fn().mockResolvedValue({
-    strategies: ['Evaluate CSRA increase options'],
-    approach: 'Community Spouse Planning Approach...',
-    status: 'success'
-  })
-}));
-
-jest.mock('../applicationPlanning', () => ({
-  medicaidApplicationPlanning: jest.fn().mockResolvedValue({
-    applicationApproach: 'Application Planning Approach...',
-    status: 'success'
+  assessCommunitySpouseNeeds: jest.fn(),
+  communitySpousePlanning: jest.fn().mockResolvedValue({
+    status: 'success',
+    mmnaCalculation: {
+      allowance: 3216
+    },
+    csraCalculation: {
+      allowance: 130380
+    },
+    strategies: ['Maximize CSRA']
   })
 }));
 
 jest.mock('../postEligibilityPlanning', () => ({
-  medicaidPostEligibilityPlanning: jest.fn().mockResolvedValue({
-    strategies: ['Set up monthly liability management'],
-    approach: 'Post-Eligibility Planning Approach...',
-    status: 'success'
+  developMaintenancePlan: jest.fn(),
+  postEligibilityPlanning: jest.fn().mockResolvedValue({
+    status: 'success',
+    strategies: ['Establish personal needs allowance account'],
+    maintenancePlan: {
+      personalAllowance: 130,
+      monthlyContributions: 3000
+    }
   })
 }));
 
 jest.mock('../estateRecovery', () => ({
-  medicaidEstateRecoveryPlanning: jest.fn().mockResolvedValue({
-    strategies: ['Consider probate estate avoidance'],
-    approach: 'Estate Recovery Planning Approach...',
-    status: 'success'
+  assessEstateRecoveryRisk: jest.fn(),
+  estateRecoveryPlanning: jest.fn().mockResolvedValue({
+    status: 'success',
+    riskAssessment: { riskLevel: 'high' },
+    strategies: ['Consider life estate deed']
   })
 }));
 
-// Sample test data
-const clientInfo = {
-  name: 'Test Client',
-  age: 75,
-  maritalStatus: 'single'
-};
+jest.mock('../applicationPlanning', () => ({
+  prepareApplicationTimeline: jest.fn(),
+  applicationPlanning: jest.fn().mockResolvedValue({
+    status: 'success',
+    timeline: {
+      preparationTime: '4-6 weeks',
+      applicationDate: 'After trust funding'
+    },
+    recommendations: ['Gather all financial statements']
+  })
+}));
 
-const assets = {
-  countable: 5000,
-  home: 150000
-};
+jest.mock('../relatedBenefits', () => ({
+  identifyRelatedBenefits: jest.fn(),
+  relatedBenefitsPlanning: jest.fn().mockResolvedValue({
+    status: 'success',
+    possibleBenefits: ['SNAP', 'Medicare Savings Programs'],
+    applicationStrategies: [
+      { benefit: 'SNAP', steps: ['Apply online'] }
+    ]
+  })
+}));
 
-const income = {
-  social_security: 1500,
-  pension: 800
-};
+jest.mock('../medicaidRulesLoader', () => ({
+  getMedicaidRules: jest.fn().mockReturnValue({
+    assetLimitSingle: 2000,
+    assetLimitMarried: 3000,
+    incomeLimit: 2382,
+    lookbackPeriod: 60
+  })
+}));
 
-const expenses = {
-  health_insurance: 200
-};
+describe('Medicaid Planning Integration Module', () => {
+  // Basic client setup for tests
+  const baseClientInfo = {
+    name: 'Test Client',
+    age: 75,
+    maritalStatus: 'single'
+  };
 
-const medicalInfo = {
-  diagnoses: ['dementia'],
-  adlLimitations: ['bathing', 'toileting']
-};
+  const baseAssets = {
+    countable: 100000,
+    home: 250000,
+    investments: 80000,
+    retirement: 150000,
+    automobile: 15000
+  };
 
-const livingInfo = {
-  currentSetting: 'home',
-  caregiverSupport: 'family'
-};
+  const baseIncome = {
+    social_security: 1800,
+    pension: 1200,
+    investment: 500
+  };
 
-const state = 'florida';
+  const baseExpenses = {
+    housing: 1500,
+    medical: 400,
+    food: 500,
+    transportation: 200
+  };
 
-describe('medicaidPlanning', () => {
-  test('should return comprehensive planning result with status success', async () => {
-    const result = await medicaidPlanning(clientInfo, assets, income, expenses, medicalInfo, livingInfo, state);
+  const baseMedicalInfo = {
+    diagnoses: ['dementia', 'hypertension'],
+    medications: ['aricept', 'lisinopril'],
+    adlLimitations: ['bathing', 'dressing', 'toileting']
+  };
 
-    expect(result.status).toBe('success');
-    expect(result).toHaveProperty('carePlan');
-    expect(result).toHaveProperty('eligibilityPlan');
-    expect(result).toHaveProperty('assetPlan');
-    expect(result).toHaveProperty('incomePlan');
-    expect(result).toHaveProperty('trustPlan');
-    expect(result).toHaveProperty('applicationPlan');
-    expect(result).toHaveProperty('postEligibilityPlan');
-    expect(result).toHaveProperty('estateRecoveryPlan');
+  const baseLivingInfo = {
+    currentSetting: 'home',
+    caregiverSupport: 'part-time'
+  };
+
+  const baseState = 'florida';
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
-  test('should gracefully handle input validation failure', async () => {
-    const { validateAllInputs } = require('../../validation/inputValidation');
-    validateAllInputs.mockResolvedValueOnce({
-      valid: false,
-      message: 'Invalid input test case',
-      normalizedData: null
+  // Integration tests for medicaidPlanning
+  describe('medicaidPlanning', () => {
+    test('should perform complete Medicaid planning process successfully', async () => {
+      const result = await medicaidPlanning(
+        baseClientInfo,
+        baseAssets,
+        baseIncome,
+        baseExpenses,
+        baseMedicalInfo,
+        baseLivingInfo,
+        baseState
+      );
+      
+      expect(result).toBeDefined();
+      expect(result.status).toBe('success');
+      
+      // Should include results from all planning modules
+      expect(result.careResults).toBeDefined();
+      expect(result.eligibilityResults).toBeDefined();
+      expect(result.assetPlanningResults).toBeDefined();
+      expect(result.incomePlanningResults).toBeDefined();
+      expect(result.annuityPlanningResults).toBeDefined();
+      expect(result.trustPlanningResults).toBeDefined();
     });
 
-    const result = await medicaidPlanning({}, {}, {}, {}, {}, {}, state);
-    expect(result.status).toBe('error');
-    expect(result.error).toContain('Invalid input test case');
-  });
+    test('should call all planning modules with correct parameters', async () => {
+      const { carePlanning } = require('../carePlanning');
+      const { eligibilityAssessment } = require('../eligibilityAssessment');
+      const { medicaidAssetPlanning } = require('../assetPlanning');
+      
+      await medicaidPlanning(
+        baseClientInfo,
+        baseAssets,
+        baseIncome,
+        baseExpenses,
+        baseMedicalInfo,
+        baseLivingInfo,
+        baseState
+      );
+      
+      // Check that each module was called with appropriate parameters
+      expect(carePlanning).toHaveBeenCalledWith(
+        expect.objectContaining(baseClientInfo),
+        expect.objectContaining(baseMedicalInfo),
+        expect.objectContaining(baseLivingInfo),
+        baseState
+      );
+      
+      expect(eligibilityAssessment).toHaveBeenCalledWith(
+        expect.objectContaining(baseClientInfo),
+        expect.objectContaining(baseAssets),
+        expect.objectContaining(baseIncome),
+        baseState
+      );
+      
+      expect(medicaidAssetPlanning).toHaveBeenCalledWith(
+        expect.objectContaining(baseClientInfo),
+        expect.objectContaining(baseAssets),
+        baseState,
+        expect.anything() // Eligibility results
+      );
+    });
 
-  test('should gracefully handle unexpected internal errors', async () => {
-    const { medicaidAssetPlanning } = require('../assetPlanning');
-    medicaidAssetPlanning.mockRejectedValueOnce(new Error('Mock internal error'));
+    test('should handle married couples with community spouse planning', async () => {
+      const { communitySpousePlanning } = require('../communitySpousePlanning');
+      
+      const marriedClientInfo = {
+        ...baseClientInfo,
+        maritalStatus: 'married',
+        spouseInfo: {
+          name: 'Spouse Name',
+          age: 73,
+          needsLongTermCare: false
+        }
+      };
+      
+      await medicaidPlanning(
+        marriedClientInfo,
+        baseAssets,
+        baseIncome,
+        baseExpenses,
+        baseMedicalInfo,
+        baseLivingInfo,
+        baseState
+      );
+      
+      // Should call community spouse planning for married clients
+      expect(communitySpousePlanning).toHaveBeenCalled();
+    });
 
-    const result = await medicaidPlanning(clientInfo, assets, income, expenses, medicalInfo, livingInfo, state);
-    expect(result.status).toBe('error');
-    expect(result.error).toContain('Medicaid planning error: Mock internal error');
-  });
-});
+    test('should skip community spouse planning for single clients', async () => {
+      const { communitySpousePlanning } = require('../communitySpousePlanning');
+      
+      await medicaidPlanning(
+        baseClientInfo, // Single client
+        baseAssets,
+        baseIncome,
+        baseExpenses,
+        baseMedicalInfo,
+        baseLivingInfo,
+        baseState
+      );
+      
+      // Should not call community spouse planning for single clients
+      expect(communitySpousePlanning).not.toHaveBeenCalled();
+    });
 
-describe('generateMedicaidPlanningReport', () => {
-  test('should generate a valid text report from planning result', async () => {
-    const result = await medicaidPlanning(clientInfo, assets, income, expenses, medicalInfo, livingInfo, state);
-    const report = generateMedicaidPlanningReport(result);
+    test('should generate comprehensive planning report', async () => {
+      const result = await medicaidPlanning(
+        baseClientInfo,
+        baseAssets,
+        baseIncome,
+        baseExpenses,
+        baseMedicalInfo,
+        baseLivingInfo,
+        baseState
+      );
+      
+      expect(result.planningReport).toBeDefined();
+      expect(result.planningReport.summary).toBeDefined();
+      expect(result.planningReport.eligibilitySummary).toBeDefined();
+      expect(result.planningReport.recommendations).toBeInstanceOf(Array);
+      expect(result.planningReport.implementationSteps).toBeInstanceOf(Array);
+    });
 
-    expect(report).toContain('COMPREHENSIVE MEDICAID PLANNING REPORT');
-    expect(report).toContain('1. CARE PLANNING');
-    expect(report).toContain('12. ESTATE RECOVERY PLANNING');
-    expect(report).toContain('SUMMARY & RECOMMENDED NEXT STEPS');
-  });
+    test('should prioritize strategies based on urgency and effectiveness', async () => {
+      const result = await medicaidPlanning(
+        baseClientInfo,
+        baseAssets,
+        baseIncome,
+        baseExpenses,
+        baseMedicalInfo,
+        baseLivingInfo,
+        baseState
+      );
+      
+      expect(result.prioritizedStrategies).toBeDefined();
+      expect(result.prioritizedStrategies).toBeInstanceOf(Array);
+      
+      // First strategy should have highest priority
+      expect(result.prioritizedStrategies[0]).toHaveProperty('priority');
+      expect(result.prioritizedStrategies[0].priority).toBe('high');
+    });
 
-  test('should return error message in report if planning failed', () => {
-    const errorResult = {
-      status: 'error',
-      error: 'Validation failed'
-    };
+    test('should handle different long-term care needs', async () => {
+      const { carePlanning } = require('../carePlanning');
+      
+      // Mock different care recommendations
+      carePlanning.mockResolvedValueOnce({
+        status: 'success',
+        careNeeds: {
+          recommendedCareLevel: 'assisted_living'
+        },
+        recommendations: ['Consider assisted living facility']
+      });
+      
+      const result = await medicaidPlanning(
+        baseClientInfo,
+        baseAssets,
+        baseIncome,
+        baseExpenses,
+        baseMedicalInfo,
+        {
+          currentSetting: 'home',
+          caregiverSupport: 'none'
+        },
+        baseState
+      );
+      
+      expect(result.careResults.careNeeds.recommendedCareLevel).toBe('assisted_living');
+      // Planning should adjust based on care setting
+      expect(result.planningReport.recommendations).toContain(
+        expect.stringMatching(/assisted living/i)
+      );
+    });
 
-    const report = generateMedicaidPlanningReport(errorResult);
-    expect(report).toBe('ERROR: Validation failed');
+    test('should handle errors in individual modules gracefully', async () => {
+      const { eligibilityAssessment } = require('../eligibilityAssessment');
+      
+      // Mock an error in eligibility assessment
+      eligibilityAssessment.mockResolvedValueOnce({
+        status: 'error',
+        error: 'Failed to calculate eligibility'
+      });
+      
+      const result = await medicaidPlanning(
+        baseClientInfo,
+        baseAssets,
+        baseIncome,
+        baseExpenses,
+        baseMedicalInfo,
+        baseLivingInfo,
+        baseState
+      );
+      
+      // Should still complete overall planning despite module error
+      expect(result.status).toBe('partial');
+      expect(result.moduleErrors).toBeDefined();
+      expect(result.moduleErrors.eligibility).toBeDefined();
+      
+      // Should still have results from other modules
+      expect(result.careResults).toBeDefined();
+      expect(result.assetPlanningResults).toBeDefined();
+    });
+
+    test('should adjust planning based on state-specific rules', async () => {
+      const { getMedicaidRules } = require('../medicaidRulesLoader');
+      
+      // Mock different rules for a different state
+      getMedicaidRules.mockReturnValueOnce({
+        assetLimitSingle: 15750, // New York's higher limit
+        assetLimitMarried: 23400,
+        incomeLimit: 934,
+        lookbackPeriod: 60
+      });
+      
+      const result = await medicaidPlanning(
+        baseClientInfo,
+        baseAssets,
+        baseIncome,
+        baseExpenses,
+        baseMedicalInfo,
+        baseLivingInfo,
+        'newyork' // Different state
+      );
+      
+      // Should include state-specific information
+      expect(result.stateSpecificConsiderations).toBeDefined();
+      expect(result.stateSpecificConsiderations).toContain('newyork');
+    });
+
+    test('should provide timeline with implementation steps', async () => {
+      const result = await medicaidPlanning(
+        baseClientInfo,
+        baseAssets,
+        baseIncome,
+        baseExpenses,
+        baseMedicalInfo,
+        baseLivingInfo,
+        baseState
+      );
+      
+      expect(result.implementationTimeline).toBeDefined();
+      expect(result.implementationTimeline.immediateSteps).toBeInstanceOf(Array);
+      expect(result.implementationTimeline.shortTermSteps).toBeInstanceOf(Array);
+      expect(result.implementationTimeline.longTermSteps).toBeInstanceOf(Array);
+    });
+
+    test('should include resources and referrals in plan', async () => {
+      const result = await medicaidPlanning(
+        baseClientInfo,
+        baseAssets,
+        baseIncome,
+        baseExpenses,
+        baseMedicalInfo,
+        baseLivingInfo,
+        baseState
+      );
+      
+      expect(result.resourcesAndReferrals).toBeDefined();
+      expect(result.resourcesAndReferrals.legalResources).toBeInstanceOf(Array);
+      expect(result.resourcesAndReferrals.financialResources).toBeInstanceOf(Array);
+      expect(result.resourcesAndReferrals.careResources).toBeInstanceOf(Array);
+    });
+
+    test('should handle clients with minimal assets differently', async () => {
+      const lowAssetClient = {
+        countable: 1500, // Under the limit
+        home: 150000,
+        automobile: 5000
+      };
+      
+      const result = await medicaidPlanning(
+        baseClientInfo,
+        lowAssetClient,
+        baseIncome,
+        baseExpenses,
+        baseMedicalInfo,
+        baseLivingInfo,
+        baseState
+      );
+      
+      // Should focus more on application and less on complex planning
+      expect(result.planningFocus).toBe('application');
+      expect(result.prioritizedStrategies.find(s => 
+        s.category === 'application' && s.priority === 'high'
+      )).toBeDefined();
+    });
+
+    test('should adjust for urgent care needs', async () => {
+      const { carePlanning } = require('../carePlanning');
+      
+      // Mock urgent care needs
+      carePlanning.mockResolvedValueOnce({
+        status: 'success',
+        careNeeds: {
+          recommendedCareLevel: 'nursing',
+          urgency: 'immediate'
+        },
+        recommendations: ['Immediate nursing facility placement needed']
+      });
+      
+      const result = await medicaidPlanning(
+        baseClientInfo,
+        baseAssets,
+        baseIncome,
+        baseExpenses,
+        {
+          ...baseMedicalInfo,
+          recentHospitalization: true,
+          criticalDiagnoses: ['advanced dementia']
+        },
+        {
+          currentSetting: 'home',
+          caregiverSupport: 'none',
+          safetyRisks: ['wandering', 'falls']
+        },
+        baseState
+      );
+      
+      // Should prioritize expedited planning and application
+      expect(result.urgentConsiderations).toBeDefined();
+      expect(result.urgentConsiderations).toContain('immediate care needs');
+      expect(result.implementationTimeline.immediateSteps).toContain(
+        expect.stringMatching(/expedited/i)
+      );
+    });
   });
 });

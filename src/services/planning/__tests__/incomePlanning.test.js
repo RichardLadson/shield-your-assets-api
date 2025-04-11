@@ -1,226 +1,474 @@
 // src/services/planning/__tests__/incomePlanning.test.js
 const {
-    assessIncomeSituation,
-    calculateShareOfCost,
-    determineIncomeStrategies,
-    planIncomeApproach,
-    medicaidIncomePlanning
-  } = require('../incomePlanning');
+  assessIncomeSituation,
+  calculateShareOfCost,
+  determineIncomeStrategies,
+  planIncomeApproach,
+  medicaidIncomePlanning
+} = require('../incomePlanning');
+
+// Mock the dependencies
+jest.mock('../../../config/logger', () => ({
+  debug: jest.fn(),
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn()
+}));
+
+// Mock the validation service
+jest.mock('../../validation/inputValidation', () => ({
+  validateAllInputs: jest.fn().mockResolvedValue({
+    valid: true,
+    message: 'All inputs are valid',
+    normalizedData: {
+      clientInfo: { name: 'Test Client', age: 75, maritalStatus: 'single' },
+      income: { social_security: 1500, pension: 800 },
+      expenses: { health_insurance: 200, housing: 1000 },
+      state: 'florida'
+    }
+  })
+}));
+
+// Mock the medicaid rules loader
+jest.mock('../../utils/medicaidRulesLoader', () => ({
+  getIncomeLimit: jest.fn().mockResolvedValue(2901),
+  getPersonalNeedsAllowance: jest.fn().mockResolvedValue(160),
+  getMmmnaLimits: jest.fn().mockResolvedValue({ min: 2555, max: 3948 }),
+  loadMedicaidRules: jest.fn().mockResolvedValue({
+    florida: {
+      incomeLimitSingle: 2901,
+      incomeLimitMarried: 5802,
+      monthlyPersonalNeedsAllowance: 160
+    },
+    california: {
+      incomeLimitSingle: 1561,
+      incomeLimitMarried: 2106,
+      monthlyPersonalNeedsAllowance: 130
+    }
+  })
+}));
+
+// Mock the eligibility utils
+jest.mock('../../eligibility/eligibilityUtils', () => ({
+  calculateTotalIncome: jest.fn().mockImplementation(income => {
+    return Object.values(income).reduce((sum, value) => sum + value, 0);
+  })
+}));
+
+describe('Income Planning Module', () => {
+  // Sample test data
+  const clientInfo = {
+    name: 'Test Client',
+    age: 75,
+    maritalStatus: 'single'
+  };
   
-  // Mock the dependencies
-  jest.mock('../../../config/logger', () => ({
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn()
-  }));
+  const income = {
+    social_security: 1500,
+    pension: 800
+  };
   
-  jest.mock('../../validation/inputValidation', () => ({
-    validateAllInputs: jest.fn().mockResolvedValue({
-      valid: true,
-      message: 'All inputs are valid',
-      normalizedData: {
-        clientInfo: { name: 'Test Client', age: 75, maritalStatus: 'single' },
-        income: { social_security: 1500, pension: 800 },
-        expenses: { health_insurance: 200, housing: 1000 },
-        state: 'florida'
-      }
-    })
-  }));
+  const expenses = {
+    health_insurance: 200,
+    housing: 1000
+  };
   
-  jest.mock('../../utils/medicaidRulesLoader', () => ({
-    loadMedicaidRules: jest.fn().mockResolvedValue({
-      florida: {
-        incomeLimitSingle: 2901,
-        monthlyPersonalNeedsAllowance: 160
-      }
-    }),
-    getIncomeLimit: jest.fn().mockResolvedValue(2901),
-    getPersonalNeedsAllowance: jest.fn().mockResolvedValue(160),
-    getMmmnaLimits: jest.fn().mockResolvedValue({ min: 2555, max: 3948 })
-  }));
+  const state = 'florida';
   
-  jest.mock('../../eligibility/eligibilityUtils', () => ({
-    calculateTotalIncome: jest.fn().mockReturnValue(2300)
-  }));
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
   
-  describe('Income Planning Module', () => {
-    // Sample test data
-    const clientInfo = {
-      name: 'Test Client',
-      age: 75,
-      maritalStatus: 'single'
-    };
-    
-    const income = {
-      social_security: 1500,
-      pension: 800
-    };
-    
-    const expenses = {
-      health_insurance: 200,
-      housing: 1000
-    };
-    
-    const state = 'florida';
-    const rulesData = {
-      florida: {
-        incomeLimitSingle: 2901,
-        monthlyPersonalNeedsAllowance: 160
-      }
-    };
-    
-    beforeEach(() => {
-      jest.clearAllMocks();
+  describe('assessIncomeSituation', () => {
+    test('should assess income situation correctly', async () => {
+      const rulesData = {
+        florida: {
+          incomeLimitSingle: 2901,
+          incomeLimitMarried: 5802
+        }
+      };
+      
+      const incomeSituation = await assessIncomeSituation(clientInfo, income, state, rulesData);
+      
+      expect(incomeSituation).toHaveProperty('totalIncome');
+      expect(incomeSituation).toHaveProperty('isIncomeCapState');
+      expect(incomeSituation).toHaveProperty('incomeLimit');
+      expect(incomeSituation).toHaveProperty('maritalStatus');
+      expect(incomeSituation).toHaveProperty('incomeSources');
+      expect(incomeSituation).toHaveProperty('overIncomeLimit');
+      expect(incomeSituation).toHaveProperty('state');
+      
+      expect(incomeSituation.totalIncome).toBe(2300);
+      expect(incomeSituation.incomeLimit).toBe(2901);
+      expect(incomeSituation.overIncomeLimit).toBe(false);
     });
     
-    describe('assessIncomeSituation', () => {
-      test('should assess income situation correctly', async () => {
-        const incomeSituation = await assessIncomeSituation(clientInfo, income, state, rulesData);
-        
-        expect(incomeSituation).toHaveProperty('totalIncome');
-        expect(incomeSituation).toHaveProperty('incomeLimit');
-        expect(incomeSituation).toHaveProperty('overIncomeLimit');
-        expect(incomeSituation.state).toBe('florida');
-      });
+    test('should correctly identify income cap states', async () => {
+      const rulesData = {
+        florida: {
+          incomeLimitSingle: 2901,
+          incomeLimitMarried: 5802
+        },
+        california: {
+          incomeLimitSingle: 1561,
+          incomeLimitMarried: 2106
+        }
+      };
       
-      test('should correctly identify income cap states', async () => {
-        const result1 = await assessIncomeSituation(clientInfo, income, 'florida', rulesData);
-        expect(result1.isIncomeCapState).toBe(true);
-        
-        const result2 = await assessIncomeSituation(clientInfo, income, 'california', rulesData);
-        expect(result2.isIncomeCapState).toBe(false);
-      });
+      const flResult = await assessIncomeSituation(clientInfo, income, 'florida', rulesData);
+      const caResult = await assessIncomeSituation(clientInfo, income, 'california', rulesData);
+      
+      expect(flResult.isIncomeCapState).toBe(true); // Florida is a cap state
+      expect(caResult.isIncomeCapState).toBe(false); // California is not a cap state
     });
     
-    describe('calculateShareOfCost', () => {
-      test('should calculate share of cost correctly', async () => {
-        const incomeSituation = {
-          totalIncome: 2300,
-          maritalStatus: 'single'
-        };
-        
-        const result = await calculateShareOfCost(incomeSituation, expenses, state, rulesData);
-        
-        expect(result).toHaveProperty('shareOfCost');
-        expect(result).toHaveProperty('deductions');
-        expect(result.deductions).toHaveProperty('personalNeedsAllowance');
-        expect(result.deductions).toHaveProperty('healthInsurancePremiums');
-      });
+    test('should assess over-income status correctly with different income levels', async () => {
+      const rulesData = {
+        florida: {
+          incomeLimitSingle: 2901,
+          incomeLimitMarried: 5802
+        }
+      };
       
-      test('should include spousal allowance for married clients', async () => {
-        const marriedSituation = {
-          totalIncome: 2300,
-          maritalStatus: 'married',
-          spouseIncome: 1000
-        };
-        
-        const result = await calculateShareOfCost(marriedSituation, expenses, state, rulesData);
-        
-        expect(result.deductions).toHaveProperty('spousalAllowance');
-        expect(result.deductions.spousalAllowance).toBeGreaterThan(0);
-      });
+      const lowIncome = {
+        social_security: 1000,
+        pension: 500
+      };
+      
+      const highIncome = {
+        social_security: 2000,
+        pension: 1500
+      };
+      
+      const lowIncomeResult = await assessIncomeSituation(clientInfo, lowIncome, state, rulesData);
+      const highIncomeResult = await assessIncomeSituation(clientInfo, highIncome, state, rulesData);
+      
+      expect(lowIncomeResult.totalIncome).toBe(1500);
+      expect(lowIncomeResult.overIncomeLimit).toBe(false);
+      
+      expect(highIncomeResult.totalIncome).toBe(3500);
+      expect(highIncomeResult.overIncomeLimit).toBe(true);
     });
     
-    describe('determineIncomeStrategies', () => {
-      test('should recommend Miller Trust for income cap states with excess income', () => {
-        const incomeSituation = {
-          totalIncome: 3000,
-          incomeLimit: 2901,
-          overIncomeLimit: true,
-          isIncomeCapState: true
-        };
-        
-        const strategies = determineIncomeStrategies(incomeSituation, 2000);
-        
-        expect(strategies).toContain('Consider Qualified Income Trust (Miller Trust)');
-      });
+    test('should apply different income limits for different marital statuses', async () => {
+      const rulesData = {
+        florida: {
+          incomeLimitSingle: 2901,
+          incomeLimitMarried: 5802
+        }
+      };
       
-      test('should recommend income spend-down for non-cap states', () => {
-        const incomeSituation = {
-          totalIncome: 3000,
-          incomeLimit: 2901,
-          overIncomeLimit: true,
-          isIncomeCapState: false
-        };
-        
-        const strategies = determineIncomeStrategies(incomeSituation, 2000);
-        
-        expect(strategies).toContain('Plan for income spend-down on allowable expenses');
-      });
+      const singleClientInfo = { ...clientInfo, maritalStatus: 'single' };
+      const marriedClientInfo = { ...clientInfo, maritalStatus: 'married' };
       
-      test('should include spousal strategies for married clients', () => {
-        const incomeSituation = {
-          totalIncome: 3000,
-          incomeLimit: 2901,
-          overIncomeLimit: true,
-          isIncomeCapState: true,
-          maritalStatus: 'married'
-        };
-        
-        const strategies = determineIncomeStrategies(incomeSituation, 2000);
-        
-        expect(strategies).toContain('Analyze spousal income allowance');
-      });
-    });
-    
-    describe('planIncomeApproach', () => {
-      test('should create detailed plan based on strategies', () => {
-        const strategies = [
-          'Consider Qualified Income Trust (Miller Trust)',
-          'Explore ways to increase allowable deductions'
-        ];
-        
-        const incomeSituation = {
-          totalIncome: 3000,
-          incomeLimit: 2901,
-          state: 'florida'
-        };
-        
-        const approach = planIncomeApproach(strategies, incomeSituation, 2000);
-        
-        expect(approach).toContain('Income Eligibility and Share of Cost Planning Approach');
-        expect(approach).toContain('Qualified Income Trust');
-        expect(approach).toContain('increase allowable deductions');
-      });
-    });
-    
-    describe('medicaidIncomePlanning', () => {
-      test('should complete the income planning process successfully', async () => {
-        const result = await medicaidIncomePlanning(clientInfo, income, expenses, state);
-        
-        expect(result.status).toBe('success');
-        expect(result).toHaveProperty('incomeSituation');
-        expect(result).toHaveProperty('shareOfCost');
-        expect(result).toHaveProperty('deductions');
-        expect(result).toHaveProperty('incomeStrategies');
-        expect(result).toHaveProperty('incomeApproach');
-      });
+      const singleResult = await assessIncomeSituation(singleClientInfo, income, state, rulesData);
+      const marriedResult = await assessIncomeSituation(marriedClientInfo, income, state, rulesData);
       
-      test('should handle validation errors', async () => {
-        // Mock the validateAllInputs function to return invalid
-        require('../../validation/inputValidation').validateAllInputs.mockResolvedValueOnce({
-          valid: false,
-          message: 'Invalid input',
-          normalizedData: null
-        });
-        
-        const result = await medicaidIncomePlanning(clientInfo, income, expenses, state);
-        
-        expect(result.status).toBe('error');
-        expect(result).toHaveProperty('error');
-      });
-      
-      test('should handle unexpected errors', async () => {
-        // Mock loadMedicaidRules to throw an error
-        require('../../utils/medicaidRulesLoader').loadMedicaidRules.mockRejectedValueOnce(
-          new Error('Database error')
-        );
-        
-        const result = await medicaidIncomePlanning(clientInfo, income, expenses, state);
-        
-        expect(result.status).toBe('error');
-        expect(result).toHaveProperty('error');
-      });
+      expect(singleResult.incomeLimit).toBe(2901);
+      expect(marriedResult.incomeLimit).toBe(5802);
     });
   });
+  
+  describe('calculateShareOfCost', () => {
+    test('should calculate share of cost correctly for single client', async () => {
+      const rulesData = {
+        florida: {
+          monthlyPersonalNeedsAllowance: 160
+        }
+      };
+      
+      const incomeSituation = {
+        totalIncome: 2300,
+        maritalStatus: 'single'
+      };
+      
+      const result = await calculateShareOfCost(incomeSituation, expenses, state, rulesData);
+      
+      expect(result).toHaveProperty('shareOfCost');
+      expect(result).toHaveProperty('deductions');
+      expect(result).toHaveProperty('totalDeductions');
+      
+      // Expected deductions: personal needs allowance ($160) + health insurance ($200) + limited housing ($200)
+      expect(result.deductions.personalNeedsAllowance).toBe(160);
+      expect(result.deductions.healthInsurancePremiums).toBe(200);
+      expect(result.deductions.housingMaintenance).toBe(200); // Housing is capped
+      
+      // Expected total deductions: $560
+      const expectedTotalDeductions = 560;
+      expect(result.totalDeductions).toBe(expectedTotalDeductions);
+      
+      // Expected share of cost: income - deductions = $2300 - $560 = $1740
+      expect(result.shareOfCost).toBe(2300 - expectedTotalDeductions);
+    });
+    
+    test('should include spousal allowance for married clients', async () => {
+      const rulesData = {
+        florida: {
+          monthlyPersonalNeedsAllowance: 160
+        }
+      };
+      
+      const marriedIncomeSituation = {
+        totalIncome: 2300,
+        maritalStatus: 'married',
+        spouseIncome: 1000
+      };
+      
+      // Mock the MMMNA function for this specific test
+      require('../../utils/medicaidRulesLoader').getMmmnaLimits.mockResolvedValueOnce({
+        min: 2555,
+        max: 3948
+      });
+      
+      const result = await calculateShareOfCost(marriedIncomeSituation, expenses, state, rulesData);
+      
+      expect(result.deductions).toHaveProperty('spousalAllowance');
+      
+      // Expected spousal allowance: min MMMNA - spouse income = $2555 - $1000 = $1555
+      expect(result.deductions.spousalAllowance).toBe(1555);
+      
+      // Total deductions should include spousal allowance
+      expect(result.totalDeductions).toBeGreaterThan(560); // More than single client deductions
+      expect(result.totalDeductions).toBe(2115); // 560 + 1555
+      
+      // Share of cost should account for spousal allowance
+      expect(result.shareOfCost).toBe(2300 - 2115);
+    });
+    
+    test('should handle zero expenses gracefully', async () => {
+      const rulesData = {
+        florida: {
+          monthlyPersonalNeedsAllowance: 160
+        }
+      };
+      
+      const incomeSituation = {
+        totalIncome: 2300,
+        maritalStatus: 'single'
+      };
+      
+      const emptyExpenses = {};
+      
+      const result = await calculateShareOfCost(incomeSituation, emptyExpenses, state, rulesData);
+      
+      // Should still include personal needs allowance
+      expect(result.deductions.personalNeedsAllowance).toBe(160);
+      expect(result.totalDeductions).toBe(160);
+      expect(result.shareOfCost).toBe(2140); // 2300 - 160
+    });
+  });
+  
+  describe('determineIncomeStrategies', () => {
+    test('should recommend Miller Trust for income cap states with excess income', () => {
+      const incomeSituation = {
+        totalIncome: 3500,
+        incomeLimit: 2901,
+        overIncomeLimit: true,
+        isIncomeCapState: true
+      };
+      
+      const strategies = determineIncomeStrategies(incomeSituation, 1740);
+      
+      expect(strategies).toContain('Consider Qualified Income Trust (Miller Trust)');
+    });
+    
+    test('should recommend income spend-down for non-cap states', () => {
+      const incomeSituation = {
+        totalIncome: 3500,
+        incomeLimit: 2901,
+        overIncomeLimit: true,
+        isIncomeCapState: false
+      };
+      
+      const strategies = determineIncomeStrategies(incomeSituation, 1740);
+      
+      expect(strategies).toContain('Plan for income spend-down on allowable expenses');
+    });
+    
+    test('should recommend deduction increase strategies when share of cost is high', () => {
+      const incomeSituation = {
+        totalIncome: 2500,
+        incomeLimit: 2901,
+        overIncomeLimit: false,
+        isIncomeCapState: true
+      };
+      
+      const highShareOfCost = 2000;
+      
+      const strategies = determineIncomeStrategies(incomeSituation, highShareOfCost);
+      
+      expect(strategies).toContain('Explore ways to increase allowable deductions');
+      expect(strategies).toContain('Consider increasing health insurance premiums');
+    });
+    
+    test('should include spousal strategies for married clients', () => {
+      const incomeSituation = {
+        totalIncome: 3500,
+        incomeLimit: 5802,
+        overIncomeLimit: false,
+        isIncomeCapState: true,
+        maritalStatus: 'married'
+      };
+      
+      const strategies = determineIncomeStrategies(incomeSituation, 2000);
+      
+      expect(strategies).toContain('Analyze spousal income allowance');
+    });
+    
+    test('should recommend minimal strategies when income is within limits', () => {
+      const incomeSituation = {
+        totalIncome: 2300,
+        incomeLimit: 2901,
+        overIncomeLimit: false,
+        isIncomeCapState: true
+      };
+      
+      const lowShareOfCost = 500;
+      
+      const strategies = determineIncomeStrategies(incomeSituation, lowShareOfCost);
+      
+      // Should still include some basic recommendations
+      expect(strategies.length).toBeGreaterThan(0);
+      expect(strategies).toContain('Review spend-down opportunities, such as pre-paid funeral or home modifications');
+    });
+  });
+  
+  describe('planIncomeApproach', () => {
+    test('should develop detailed planning approach based on strategies', () => {
+      const strategies = [
+        'Consider Qualified Income Trust (Miller Trust)',
+        'Explore ways to increase allowable deductions'
+      ];
+      
+      const incomeSituation = {
+        totalIncome: 3500,
+        incomeLimit: 2901,
+        state: 'florida'
+      };
+      
+      const shareOfCost = 2000;
+      
+      const approach = planIncomeApproach(strategies, incomeSituation, shareOfCost);
+      
+      expect(approach).toContain('Income Eligibility and Share of Cost Planning Approach');
+      expect(approach).toContain('Total Income: $3500.00');
+      expect(approach).toContain('Income Limit: $2901.00');
+      expect(approach).toContain('Calculated Share of Cost: $2000.00');
+      
+      expect(approach).toContain('Qualified Income Trust');
+      expect(approach).toContain('$599.00'); // Excess income amount (3500 - 2901)
+      expect(approach).toContain('florida'); // State name
+      expect(approach).toContain('Review all possible deductions');
+    });
+    
+    test('should include appropriate recommendations for income spend-down', () => {
+      const strategies = [
+        'Plan for income spend-down on allowable expenses'
+      ];
+      
+      const incomeSituation = {
+        totalIncome: 3500,
+        incomeLimit: 2901,
+        state: 'california' // Non-cap state
+      };
+      
+      const shareOfCost = 2000;
+      
+      const approach = planIncomeApproach(strategies, incomeSituation, shareOfCost);
+      
+      expect(approach).toContain('Develop a plan to spend down excess income on allowable expenses');
+    });
+    
+    test('should include spousal allowance guidance when applicable', () => {
+      const strategies = [
+        'Analyze spousal income allowance',
+        'Consider fair hearing or court order for increased MMMNA'
+      ];
+      
+      const incomeSituation = {
+        totalIncome: 4000,
+        incomeLimit: 5802,
+        state: 'florida',
+        maritalStatus: 'married'
+      };
+      
+      const shareOfCost = 1500;
+      
+      const approach = planIncomeApproach(strategies, incomeSituation, shareOfCost);
+      
+      expect(approach).toContain('Calculate and optimize spousal income allowance');
+      expect(approach).toContain('fair hearing');
+    });
+  });
+  
+  describe('medicaidIncomePlanning', () => {
+    test('should complete the income planning process successfully', async () => {
+      const result = await medicaidIncomePlanning(clientInfo, income, expenses, state);
+      
+      expect(result.status).toBe('success');
+      expect(result).toHaveProperty('incomeSituation');
+      expect(result).toHaveProperty('shareOfCost');
+      expect(result).toHaveProperty('deductions');
+      expect(result).toHaveProperty('incomeStrategies');
+      expect(result).toHaveProperty('incomeApproach');
+    });
+    
+    test('should handle validation failures', async () => {
+      // Mock validation failure
+      require('../../validation/inputValidation').validateAllInputs.mockResolvedValueOnce({
+        valid: false,
+        message: 'Invalid income data',
+        normalizedData: null
+      });
+      
+      const result = await medicaidIncomePlanning(clientInfo, income, expenses, state);
+      
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('Invalid income data');
+    });
+    
+    test('should handle errors in rules loading', async () => {
+      // Mock loadMedicaidRules to throw an error
+      require('../../utils/medicaidRulesLoader').loadMedicaidRules.mockRejectedValueOnce(
+        new Error('Database connection error')
+      );
+      
+      const result = await medicaidIncomePlanning(clientInfo, income, expenses, state);
+      
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('Database connection error');
+    });
+    
+    test('should process different states correctly', async () => {
+      const flResult = await medicaidIncomePlanning(clientInfo, income, expenses, 'florida');
+      const caResult = await medicaidIncomePlanning(clientInfo, income, expenses, 'california');
+      
+      expect(flResult.status).toBe('success');
+      expect(caResult.status).toBe('success');
+    });
+    
+    test('should handle different marital statuses', async () => {
+      const singleClient = { ...clientInfo, maritalStatus: 'single' };
+      const marriedClient = { ...clientInfo, maritalStatus: 'married' };
+      
+      const singleResult = await medicaidIncomePlanning(singleClient, income, expenses, state);
+      const marriedResult = await medicaidIncomePlanning(marriedClient, income, expenses, state);
+      
+      expect(singleResult.status).toBe('success');
+      expect(marriedResult.status).toBe('success');
+    });
+    
+    test('should handle high income scenarios correctly', async () => {
+      const highIncome = {
+        social_security: 2000,
+        pension: 1500
+      };
+      
+      const result = await medicaidIncomePlanning(clientInfo, highIncome, expenses, state);
+      
+      expect(result.status).toBe('success');
+      expect(result.incomeSituation.overIncomeLimit).toBe(true);
+      expect(result.incomeStrategies).toContain('Consider Qualified Income Trust (Miller Trust)');
+    });
+  });
+});
