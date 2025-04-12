@@ -1,37 +1,38 @@
-// File: /src/config/logger.ts
-import winston from "winston";
+// src/config/logger.js
+const winston = require('winston');
 
-const { combine, timestamp, printf, colorize, simple } = winston.format;
-
-// Define log format with timestamp and level formatting.
-const logFormat = combine(
-  timestamp(),
-  printf(({ timestamp, level, message }) => {
-    return `${timestamp} [${level.toUpperCase()}]: ${message}`;
-  })
-);
+// Create a logger instance
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.combine(
+    winston.format.timestamp({
+      format: 'YYYY-MM-DD HH:mm:ss'
+    }),
+    winston.format.errors({ stack: true }),
+    winston.format.splat(),
+    winston.format.json()
+  ),
+  defaultMeta: { service: 'medicaid-planning-api' }
+});
 
 // Create an array of transports including console and file outputs.
-const transports: winston.transport[] = [
+const transports = [
   new winston.transports.Console(),
   new winston.transports.File({ filename: "logs/error.log", level: "error" }),
   new winston.transports.File({ filename: "logs/combined.log" })
 ];
 
-// Create logger instance with desired level and format.
-const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || "info",
-  format: logFormat,
-  transports
-});
+// Add all transports to the logger
+transports.forEach(transport => logger.add(transport));
 
-// If we're not in production, add additional console transport with colorized output.
-if (process.env.NODE_ENV !== "production") {
-  logger.add(
-    new winston.transports.Console({
-      format: combine(colorize(), simple())
-    })
-  );
+// If we're in development, also log to the console with colorized output
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.combine(
+      winston.format.colorize(),
+      winston.format.simple()
+    )
+  }));
 }
 
-export { logger };
+module.exports = logger;

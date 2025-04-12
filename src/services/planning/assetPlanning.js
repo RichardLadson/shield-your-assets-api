@@ -1,205 +1,286 @@
 // src/services/planning/assetPlanning.js
 const logger = require('../../config/logger');
-const { validateAllInputs } = require('../validation/inputValidation');
-const { getResourceLimit, getHomeEquityLimit, loadMedicaidRules } = require('../utils/medicaidRulesLoader');
-const { classifyAssets } = require('../eligibility/eligibilityUtils');
+const medicaidRulesLoader = require('../utils/medicaidRulesLoader');
+const eligibilityUtils = require('../eligibility/eligibilityUtils');
 
 /**
- * Assess the client's asset situation for Medicaid planning
- * @param {Object} assets - Client assets
- * @param {string} state - Normalized state
- * @param {string} maritalStatus - Client marital status
- * @param {Object} rulesData - Rules data
- * @returns {Promise<Object>} - Asset situation assessment
+ * Assesses a client's asset situation for Medicaid
+ * 
+ * @param {Object} assets - Client's assets breakdown by type
+ * @param {string} state - State of application (will be converted to uppercase)
+ * @param {string} maritalStatus - Client's marital status
+ * @returns {Promise<Object>} Asset assessment results
  */
-async function assessAssetSituation(assets, state, maritalStatus, rulesData) {
-  logger.debug(`Assessing asset situation for ${state}`);
-  
-  // Get resource limit from rules data
-  const resourceLimit = await getResourceLimit(state, maritalStatus, rulesData);
-  
-  // Get home equity limit from rules data
-  const homeEquityLimit = await getHomeEquityLimit(state, rulesData);
-  
-  // Classify assets
-  const { countableAssets, nonCountableAssets } = classifyAssets(assets);
-  
-  // Calculate excess assets
-  const excessAssets = Math.max(0, countableAssets - resourceLimit);
-  
-  // Check for home and excess home equity
-  const hasHome = assets.home > 0 || assets.primary_residence > 0;
-  let homeValue = 0;
-  let homeMortgage = 0;
-  let homeEquity = 0;
-  let excessHomeEquity = 0;
-  
-  if (hasHome) {
-    homeValue = assets.home || assets.primary_residence || 0;
-    homeMortgage = assets.mortgage || assets.home_mortgage || 0;
-    homeEquity = homeValue - homeMortgage;
-    
-    if (homeEquityLimit) {
-      excessHomeEquity = Math.max(0, homeEquity - homeEquityLimit);
-    }
-  }
-  
-  return {
-    totalAssets: countableAssets + nonCountableAssets,
-    countableAssets,
-    nonCountableAssets,
-    excessAssets,
-    hasHome,
-    homeValue,
-    homeMortgage,
-    homeEquity,
-    homeEquityLimit,
-    excessHomeEquity,
-    resourceLimit,
-    state
-  };
-}
-
-/**
- * Determine asset planning strategies
- * @param {Object} situation - Asset situation assessment
- * @returns {Array} - Asset planning strategies
- */
-function determineAssetStrategies(situation) {
-  logger.debug('Determining asset planning strategies');
-  
-  const strategies = [];
-  
-  if (situation.excessAssets > 0) {
-    strategies.push("Convert countable assets to non-countable assets");
-  }
-  
-  if (situation.hasHome) {
-    strategies.push("Maximize homestead advantages");
-  }
-  
-  // If state has a home equity limit and we exceed it
-  if (situation.excessHomeEquity > 0) {
-    strategies.push("Address excess home equity");
-  }
-  
-  strategies.push("Evaluate personal property exemptions");
-  strategies.push("Consider fair market value transactions");
-  
-  return strategies;
-}
-
-/**
- * Develop detailed asset planning approach
- * @param {Array} strategies - Asset planning strategies
- * @param {Object} situation - Asset situation assessment
- * @returns {string} - Detailed planning approach
- */
-function planAssetApproach(strategies, situation) {
-  logger.debug('Developing detailed asset planning approach');
-  
-  let approach = "Asset Eligibility Planning Approach:\n";
-  
-  for (const strategy of strategies) {
-    if (strategy === "Convert countable assets to non-countable assets") {
-      approach += `- Identify $${situation.excessAssets.toFixed(2)} in excess countable assets\n`;
-      approach += "- Explore options to convert to exempt assets:\n";
-      approach += " * Pay off debt, especially home mortgage\n";
-      approach += " * Purchase necessary household items or personal effects\n";
-      approach += " * Prepay funeral and burial expenses\n";
-    } else if (strategy === "Maximize homestead advantages") {
-      approach += "- Consider home renovations or improvements\n";
-      if (situation.homeEquityLimit) {
-        approach += `- Evaluate options to ensure home equity stays below state limit of $${situation.homeEquityLimit.toFixed(2)}\n`;
-      }
-    } else if (strategy === "Address excess home equity") {
-      approach += `- Current home equity ($${situation.homeEquity.toFixed(2)}) exceeds state limit of $${situation.homeEquityLimit.toFixed(2)}\n`;
-      approach += `- Consider home equity loan or reverse mortgage to reduce equity by $${situation.excessHomeEquity.toFixed(2)}\n`;
-    } else if (strategy === "Evaluate personal property exemptions") {
-      approach += `- Review ${situation.state.replace('_', ' ').toUpperCase()}-specific rules on exempt personal property\n`;
-      approach += "- Consider converting cash to exempt personal property where appropriate\n";
-    } else if (strategy === "Consider fair market value transactions") {
-      approach += "- Explore opportunities for fair market value transactions:\n";
-      approach += " * Purchase of life estate in another's home\n";
-      approach += " * Buy-in to a continuing care retirement community\n";
-    }
-  }
-  
-  approach += "\nConsiderations:\n";
-  approach += "- Ensure all transactions are well-documented and at fair market value\n";
-  approach += "- Consider potential impact on income and estate planning\n";
-  approach += `- Consult with an elder law attorney familiar with ${situation.state.replace('_', ' ').toUpperCase()} Medicaid rules\n`;
-  approach += "- Allow for error margin in calculations to ensure eligibility\n";
-  
-  return approach;
-}
-
-/**
- * Process asset planning for Medicaid eligibility
- * @param {Object} clientInfo - Client information
- * @param {Object} assets - Client assets
- * @param {string} state - Client state
- * @returns {Promise<Object>} - Asset planning results
- */
-async function medicaidAssetPlanning(clientInfo, assets, state) {
-  logger.info(`Starting Medicaid asset planning for ${state}`);
+async function assessAssetSituation(assets, state, maritalStatus) {
+  // Convert state to uppercase to match test expectations
+  const stateUpper = state.toUpperCase();
+  logger.debug(`Assessing asset situation for ${stateUpper}, marital status: ${maritalStatus}`);
   
   try {
-    // Load rules data
-    const rulesData = await loadMedicaidRules();
+    // Classify assets
+    const { countableAssets, nonCountableAssets } = eligibilityUtils.classifyAssets(assets);
     
-    // Validate inputs
-    const validationResult = await validateAllInputs(
-      clientInfo, assets, {}, {}, null, state
-    );
+    // Get state resource limit
+    const resourceLimit = await medicaidRulesLoader.getResourceLimit(stateUpper, maritalStatus);
     
-    if (!validationResult.valid) {
-      logger.error(`Input validation failed: ${validationResult.message}`);
-      return {
-        error: validationResult.message,
-        status: 'error'
-      };
+    // Determine if assets exceed limit
+    const exceedsLimit = countableAssets > resourceLimit;
+    
+    // Calculate excess assets
+    const excessAssets = exceedsLimit ? countableAssets - resourceLimit : 0;
+    
+    return {
+      countableAssets,
+      nonCountableAssets,
+      resourceLimit,
+      exceedsLimit,
+      excessAssets,
+      state: stateUpper
+    };
+  } catch (error) {
+    logger.error(`Error assessing asset situation: ${error.message}`);
+    throw new Error(`Asset assessment error: ${error.message}`);
+  }
+}
+
+/**
+ * Assesses home equity for Medicaid eligibility
+ * 
+ * @param {Object} assets - Client's assets including home value
+ * @param {string} state - State of application
+ * @returns {Promise<Object>} Home equity assessment
+ */
+async function assessHomeEquity(assets, state) {
+  const stateUpper = state.toUpperCase();
+  logger.debug(`Assessing home equity for ${stateUpper}`);
+  
+  try {
+    // Extract home value
+    const homeValue = assets.home || assets.primary_residence || 0;
+    
+    // Get mortgage balance
+    const mortgageBalance = assets.mortgage_balance || 0;
+    
+    // Calculate equity
+    const equity = Math.max(0, homeValue - mortgageBalance);
+    
+    // Get state equity limit
+    const equityLimit = await medicaidRulesLoader.getHomeEquityLimit(stateUpper);
+    
+    // Determine if equity exceeds limit
+    const exceedsLimit = equity > equityLimit;
+    
+    return {
+      homeValue,
+      mortgageBalance,
+      equity,
+      equityLimit,
+      exceedsLimit,
+      excessEquity: exceedsLimit ? equity - equityLimit : 0
+    };
+  } catch (error) {
+    logger.error(`Error assessing home equity: ${error.message}`);
+    throw new Error(`Home equity assessment error: ${error.message}`);
+  }
+}
+
+/**
+ * Develops asset planning strategies based on assessment
+ * 
+ * @param {Object} assessment - Asset assessment from assessAssetSituation
+ * @param {Object} homeEquity - Home equity assessment from assessHomeEquity
+ * @param {Object} clientInfo - Client demographic information
+ * @returns {Promise<Object>} Asset planning strategies
+ */
+async function developAssetStrategies(assessment, homeEquity, clientInfo) {
+  logger.debug(`Developing asset strategies for client in ${assessment.state}`);
+  
+  try {
+    const strategies = [];
+    const implementationSteps = [];
+    
+    // If assets exceed limit, recommend appropriate strategies
+    if (assessment.exceedsLimit) {
+      // Basic strategies
+      strategies.push('Spend down excess countable assets on exempt goods/services');
+      implementationSteps.push('Pay for immediate care needs and medical expenses');
+      
+      // More specific strategies based on amount of excess
+      if (assessment.excessAssets > 10000) {
+        strategies.push('Convert countable assets to non-countable resources');
+        implementationSteps.push('Make home improvements if primary residence is owned');
+        implementationSteps.push('Purchase irrevocable funeral trust');
+        
+        // Add more strategies based on marital status
+        if (clientInfo.maritalStatus === 'married' && !clientInfo.spouseNeedsLTC) {
+          strategies.push('Maximize Community Spouse Resource Allowance (CSRA)');
+          implementationSteps.push('Consult with elder law attorney for CSRA planning');
+        } else {
+          strategies.push('Evaluate Medicaid-compliant annuity purchase');
+          implementationSteps.push('Obtain quotes for Medicaid-compliant annuity');
+        }
+      }
+    } else {
+      strategies.push('Assets within Medicaid limits, focus on documentation and preservation');
+      implementationSteps.push('Document exempt asset status');
+      implementationSteps.push('Maintain records of all financial transactions');
     }
     
-    // Use normalized data from validation
-    const normalizedData = validationResult.normalizedData;
-    const normalizedClientInfo = normalizedData.clientInfo;
-    const normalizedAssets = normalizedData.assets;
-    const normalizedState = normalizedData.state;
-    const maritalStatus = normalizedClientInfo.maritalStatus;
+    // Home equity strategies if applicable
+    if (homeEquity && homeEquity.exceedsLimit) {
+      strategies.push('Address excess home equity');
+      
+      // Different strategies based on circumstances
+      if (clientInfo.maritalStatus === 'married' && !clientInfo.spouseNeedsLTC) {
+        implementationSteps.push('Transfer home to community spouse');
+      } else if (clientInfo.dependentRelativeInHome) {
+        implementationSteps.push('Document dependent relative's residence in the home');
+      } else {
+        implementationSteps.push('Consider home equity loan to reduce countable equity');
+        implementationSteps.push('Evaluate sale of home and transition to care facility');
+      }
+    }
     
-    // Assess asset situation
-    const situation = await assessAssetSituation(
-      normalizedAssets, normalizedState, maritalStatus, rulesData
+    return {
+      strategies,
+      implementationSteps,
+      planningTimeframe: assessment.exceedsLimit ? '3-6 months' : 'Immediate',
+      needsLegalAssistance: assessment.excessAssets > 10000 || (homeEquity && homeEquity.exceedsLimit)
+    };
+  } catch (error) {
+    logger.error(`Error developing asset strategies: ${error.message}`);
+    throw new Error(`Strategy development error: ${error.message}`);
+  }
+}
+
+/**
+ * Implements asset planning actions
+ * 
+ * @param {Object} strategies - Strategies from developAssetStrategies
+ * @param {Object} clientInfo - Client demographic information
+ * @param {Object} assessment - Asset assessment
+ * @returns {Promise<Object>} Implementation plan
+ */
+async function implementAssetPlan(strategies, clientInfo, assessment) {
+  logger.debug('Implementing asset planning strategies');
+  
+  try {
+    const spendDownPlan = [];
+    const conversionPlan = [];
+    const protectionPlan = [];
+    
+    // Create specific plans based on strategies
+    strategies.strategies.forEach(strategy => {
+      if (strategy.includes('spend down')) {
+        spendDownPlan.push('Pay for care services in advance');
+        spendDownPlan.push('Pay off debts and mortgages');
+        spendDownPlan.push('Pay for medical devices not covered by insurance');
+        
+        if (assessment.excessAssets > 5000) {
+          spendDownPlan.push('Home modifications for aging in place');
+          spendDownPlan.push('Purchase newer vehicle if needed for transportation');
+        }
+      } else if (strategy.includes('convert')) {
+        conversionPlan.push('Purchase irrevocable funeral trust');
+        conversionPlan.push('Home repairs and improvements');
+        
+        if (clientInfo.maritalStatus === 'married') {
+          conversionPlan.push('Transfer assets to community spouse within CSRA limits');
+        }
+      } else if (strategy.includes('Community Spouse Resource Allowance')) {
+        protectionPlan.push('Document all assets for CSRA calculation');
+        protectionPlan.push('Rearrange asset ownership for maximum protection');
+        protectionPlan.push('Consider fair hearing if additional resource protection needed');
+      }
+    });
+    
+    // Generate timeline
+    const timeline = [
+      { month: 1, action: 'Document and categorize all assets' },
+      { month: 1, action: 'Begin spend-down of clearly countable assets' },
+      { month: 2, action: 'Implement asset conversion strategies' },
+      { month: 3, action: 'Review progress and adjust plan' }
+    ];
+    
+    return {
+      spendDownPlan,
+      conversionPlan,
+      protectionPlan,
+      timeline,
+      documentationRequirements: [
+        'Complete financial statements',
+        'Receipts for all spend-down transactions',
+        'Appraisals of real property and other significant assets',
+        'Exempt asset documentation'
+      ]
+    };
+  } catch (error) {
+    logger.error(`Error implementing asset plan: ${error.message}`);
+    throw new Error(`Implementation error: ${error.message}`);
+  }
+}
+
+/**
+ * Complete asset planning workflow
+ * 
+ * @param {Object} clientInfo - Client demographic information
+ * @param {Object} assets - Client's assets
+ * @param {string} state - State of application
+ * @returns {Promise<Object>} Complete asset planning result
+ */
+async function assetPlanning(clientInfo, assets, state) {
+  logger.info(`Starting asset planning for ${state}`);
+  
+  try {
+    // Run asset situation assessment
+    const assessment = await assessAssetSituation(
+      assets, 
+      state, 
+      clientInfo.maritalStatus
     );
     
-    // Determine strategies
-    const strategies = determineAssetStrategies(situation);
+    // Run home equity assessment if client has a home
+    const homeEquity = (assets.home || assets.primary_residence) 
+      ? await assessHomeEquity(assets, state) 
+      : null;
     
-    // Plan approach
-    const approach = planAssetApproach(strategies, situation);
+    // Develop strategies based on assessments
+    const strategies = await developAssetStrategies(assessment, homeEquity, clientInfo);
+    
+    // Implement asset plan
+    const implementation = await implementAssetPlan(strategies, clientInfo, assessment);
     
     logger.info('Asset planning completed successfully');
     
     return {
-      situation,
+      status: 'success',
+      assessment,
+      homeEquity,
       strategies,
-      approach,
-      status: 'success'
+      implementation,
+      summary: {
+        countableAssets: assessment.countableAssets,
+        resourceLimit: assessment.resourceLimit,
+        exceedsLimit: assessment.exceedsLimit,
+        excessAssets: assessment.excessAssets,
+        keyStrategies: strategies.strategies.slice(0, 3)
+      }
     };
   } catch (error) {
     logger.error(`Error in asset planning: ${error.message}`);
     return {
-      error: `Asset planning error: ${error.message}`,
-      status: 'error'
+      status: 'error',
+      error: `Asset planning error: ${error.message}`
     };
   }
 }
 
-// Export all functions for more flexibility and testability
+// Export both function names for compatibility
 module.exports = {
+  assetPlanning,
   assessAssetSituation,
-  determineAssetStrategies,
-  planAssetApproach,
-  medicaidAssetPlanning
-};
+  assessHomeEquity,
+  developAssetStrategies,
+  implementAssetPlan,
+  // For backward compatibility
+  medicaidAssetPlanning: assetPlanning

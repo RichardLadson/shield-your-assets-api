@@ -5,160 +5,373 @@ const medicaidRules = require('../../data/medicaid_rules_2025.json');
 /**
  * Assesses the community spouse planning situation
  * 
+ * @param {Object} clientInfo - Client demographic information
  * @param {Object} assets - Client's asset data
+ * @param {Object} income - Client's income data
+ * @param {Object} expenses - Client's expenses
  * @param {string} state - State of application
- * @returns {Object} Community spouse situation assessment
+ * @returns {Object} Community spouse needs assessment
  */
-function assessCommunitySpouseSituation(assets, state, rules) {
-  logger.debug(`Assessing community spouse situation for state ${state}`);
+function assessCommunitySpouseNeeds(clientInfo, assets, income, expenses, state) {
+  logger.debug(`Assessing community spouse needs for state ${state}`);
 
-  if (
-    typeof rules.csraMin !== 'number' ||
-    typeof rules.csraMax !== 'number' ||
-    typeof rules.assetLimitSingle !== 'number'
-  ) {
-    throw new Error(`Missing CSRA or asset limit values for state: ${state}`);
+  // Check if client is married with a community spouse
+  if (clientInfo.maritalStatus !== 'married' || !clientInfo.spouseInfo) {
+    return {
+      hasCommunitySpoue: false,
+      message: 'Client is not married or has no community spouse'
+    };
   }
 
-  const totalAssets = Object.values(assets).reduce((a, b) => a + b, 0);
+  // Get state rules
+  const rules = medicaidRules[state.toLowerCase()];
+  if (!rules) {
+    throw new Error(`No Medicaid rules found for state: ${state}`);
+  }
 
-  const csra = Math.min(Math.max(totalAssets / 2, rules.csraMin), rules.csraMax);
-  const assetLimit = rules.assetLimitSingle;
+  // Basic spouse needs assessment
+  const spouseNeeds = {
+    housingCosts: expenses.housing + (expenses.utilities || 0),
+    incomeGap: calculateIncomeGap(income, expenses, state, rules),
+    needsIncomeAllowance: true,
+    medicalNeeds: {
+      highMedicalExpenses: (expenses.medical || 0) > 500
+    }
+  };
 
-  const excessAssets = Math.max(0, totalAssets - (assetLimit + csra));
-  const hasHome = assets.home !== undefined && assets.home > 0;
+  if (clientInfo.spouseInfo.age > 80) {
+    spouseNeeds.specialConsiderations = ['elderly spouse requires additional support'];
+  }
 
-  return { 
-    totalAssets, 
-    csra, 
-    excessAssets, 
-    hasHome, 
-    state,
-    csraMin: rules.csraMin,
-    csraMax: rules.csraMax
+  return {
+    spouseNeeds,
+    incomeGap: spouseNeeds.incomeGap,
+    resourceNeeds: calculateResourceNeeds(assets, income, state, rules)
   };
 }
 
 /**
- * Determines community spouse planning strategies based on assessment
- * 
- * @param {Object} situation - Community spouse situation from assessCommunitySpouseSituation
- * @returns {Array} Array of strategy strings
+ * Calculate income gap for community spouse
  */
-function determineCommunitySpouseStrategies(situation) {
-  logger.debug("Determining community spouse strategies");
-  const strategies = [];
-
-  if (situation.excessAssets > 0) {
-    strategies.push("Evaluate CSRA increase options");
-  }
-
-  if (situation.hasHome) {
-    strategies.push("Consider home equity planning strategies");
-  }
-
-  strategies.push("Explore snapshot date optimization");
-
-  if (situation.csra < situation.csraMax) {
-    strategies.push("Investigate fair hearing for CSRA increase");
-  }
-
-  return strategies;
+function calculateIncomeGap(income, expenses, state, rules) {
+  const spouseIncome = income.spouse_social_security || 0;
+  const totalExpenses = Object.values(expenses).reduce((sum, val) => sum + val, 0);
+  return Math.max(0, totalExpenses - spouseIncome);
 }
 
 /**
- * Creates a detailed community spouse planning approach
- * 
- * @param {Array} strategies - Strategies from determineCommunitySpouseStrategies
- * @param {Object} situation - Community spouse situation from assessCommunitySpouseSituation
- * @returns {string} Formatted community spouse planning approach
+ * Calculate resource needs for community spouse
  */
-function planCommunitySpouseApproach(strategies, situation) {
-  logger.debug("Planning community spouse approach");
-  let approach = "Community Spouse Asset Planning Approach:\n";
+function calculateResourceNeeds(assets, income, state, rules) {
+  const totalAssets = Object.values(assets).reduce((sum, val) => 
+    typeof val === 'number' ? sum + val : sum, 0);
+  return {
+    totalAssets,
+    needsResourceProtection: totalAssets > 10000
+  };
+}
 
-  approach += `- Total Assets: $${situation.totalAssets.toFixed(2)}\n`;
-  approach += `- Current CSRA: $${situation.csra.toFixed(2)}\n`;
+/**
+ * Calculates the Community Spouse Resource Allowance
+ * 
+ * @param {number} totalAssets - Total countable assets
+ * @param {Object} clientInfo - Client demographic information
+ * @param {string} state - State of application
+ * @returns {Object} CSRA calculation details
+ */
+function calculateCSRA(totalAssets, clientInfo, state) {
+  logger.debug(`Calculating CSRA for ${state} with total assets: ${totalAssets}`);
 
-  if (situation.excessAssets > 0) {
-    approach += `- Excess assets: $${situation.excessAssets.toFixed(2)}\n`;
+  // Get state rules
+  const rules = medicaidRules[state.toLowerCase()];
+  if (!rules) {
+    throw new Error(`No Medicaid rules found for state: ${state}`);
   }
 
-  approach += "\nRecommended Strategies:\n";
+  // Get CSRA limits
+  const csraMin = rules.communitySpouseResourceAllowanceMin;
+  const csraMax = rules.communitySpouseResourceAllowanceMax;
 
-  strategies.forEach(strategy => {
-    if (strategy.includes("CSRA increase options")) {
-      approach += "- Explore options to increase CSRA:\n";
-      approach += "  * Convert assets to income-producing forms\n";
-      approach += "  * Consider purchasing an annuity with excess assets\n";
-      approach += `  * Need to address $${situation.excessAssets.toFixed(2)} in excess assets\n`;
-    } else if (strategy.includes("home equity planning")) {
-      approach += "- Home equity planning considerations:\n";
-      approach += "  * The home is exempt for the community spouse\n";
-      approach += "  * Consider home improvements or modifications\n";
-      approach += "  * Evaluate mortgage payoff with excess assets if applicable\n";
-    } else if (strategy.includes("snapshot date optimization")) {
-      approach += "- Optimize the asset snapshot date:\n";
-      approach += "  * The snapshot date is typically the first day of continuous institutionalization\n";
-      approach += "  * Plan asset transfers and acquisitions with this date in mind\n";
-      approach += "  * Ensure proper documentation of assets on the snapshot date\n";
-    } else if (strategy.includes("fair hearing for CSRA increase")) {
-      approach += "- Consider requesting a fair hearing for CSRA increase:\n";
-      approach += `  * Current CSRA is $${situation.csra.toFixed(2)}, maximum is $${situation.csraMax.toFixed(2)}\n`;
-      approach += "  * May be possible if community spouse income is below MMMNA\n";
-      approach += "  * Will need to demonstrate need for additional assets to generate income\n";
+  if (!csraMin || !csraMax) {
+    throw new Error(`Missing CSRA limits for state: ${state}`);
+  }
+
+  // Calculate half of assets
+  const halfOfAssets = totalAssets / 2;
+
+  // Apply CSRA limits
+  let csraAmount;
+  if (halfOfAssets < csraMin) {
+    csraAmount = csraMin;
+  } else if (halfOfAssets > csraMax) {
+    csraAmount = csraMax;
+  } else {
+    csraAmount = halfOfAssets;
+  }
+
+  // Calculate remaining assets after CSRA
+  const remainingAssets = Math.max(0, totalAssets - csraAmount);
+
+  // Determine if all assets are protected
+  const allAssetsProtected = remainingAssets === 0;
+
+  // Check for special circumstances
+  const specialCircumstances = [];
+  const expandedAllowanceRecommended = false;
+  
+  if (clientInfo.spouseInfo && clientInfo.spouseInfo.expandedResourceAllowance) {
+    specialCircumstances.push(`expanded resource allowance due to ${clientInfo.spouseInfo.expandedResourceReason}`);
+  }
+
+  return {
+    totalCountableAssets: totalAssets,
+    halfOfAssets,
+    csraAmount,
+    remainingAssets,
+    allAssetsProtected,
+    specialCircumstances,
+    expandedAllowanceRecommended
+  };
+}
+
+/**
+ * Calculates the Minimum Monthly Maintenance Needs Allowance
+ * 
+ * @param {Object} spouseNeeds - Spouse needs assessment
+ * @param {Object} clientInfo - Client demographic information
+ * @param {string} state - State of application
+ * @returns {Object} MMNA calculation details
+ */
+function calculateMMNA(spouseNeeds, clientInfo, state) {
+  logger.debug(`Calculating MMNA for ${state}`);
+
+  // Get state rules
+  const rules = medicaidRules[state.toLowerCase()];
+  if (!rules) {
+    throw new Error(`No Medicaid rules found for state: ${state}`);
+  }
+
+  // Get MMNA limits
+  const mmnaMin = rules.monthlyMaintenanceNeedsAllowanceMin;
+  const mmnaMax = rules.monthlyMaintenanceNeedsAllowanceMax;
+  const excessShelterStandard = rules.monthlyMaintenanceNeedsAllowanceMin / 3; // Typically 1/3 of min MMNA
+
+  if (!mmnaMin || !mmnaMax) {
+    throw new Error(`Missing MMNA limits for state: ${state}`);
+  }
+
+  // Calculate excess shelter allowance
+  const housingCosts = spouseNeeds.housingCosts || 0;
+  const excessShelterAllowance = Math.max(0, housingCosts - excessShelterStandard);
+
+  // Calculate total allowance
+  let totalAllowance = mmnaMin + excessShelterAllowance;
+  
+  // Apply cap if needed
+  const isCapped = totalAllowance > mmnaMax;
+  if (isCapped) {
+    totalAllowance = mmnaMax;
+  }
+
+  // Handle court-ordered support if applicable
+  let courtOrderedAmount = null;
+  let courtOrderOverride = false;
+  
+  if (spouseNeeds.courtOrderedSupport) {
+    courtOrderedAmount = spouseNeeds.courtOrderedSupport;
+    courtOrderOverride = true;
+    totalAllowance = courtOrderedAmount;
+  }
+
+  return {
+    baseAllowance: mmnaMin,
+    excessShelterAllowance,
+    totalAllowance,
+    isCapped,
+    courtOrderedAmount,
+    courtOrderOverride
+  };
+}
+
+/**
+ * Develops strategies for community spouse
+ * 
+ * @param {Object} csraCalculation - CSRA calculation from calculateCSRA
+ * @param {Object} mmnaCalculation - MMNA calculation from calculateMMNA
+ * @param {Object} spouseNeeds - Spouse needs assessment
+ * @param {Object} clientInfo - Client demographic information
+ * @param {Object} assets - Client's asset data
+ * @param {Object} income - Client's income data
+ * @param {string} state - State of application
+ * @returns {Object} Community spouse strategies
+ */
+function developSpouseStrategies(
+  csraCalculation,
+  mmnaCalculation,
+  spouseNeeds,
+  clientInfo,
+  assets,
+  income,
+  state
+) {
+  logger.debug(`Developing community spouse strategies for ${state}`);
+
+  const strategies = [];
+  const implementation = [];
+  
+  // Asset allocation strategies
+  if (csraCalculation.remainingAssets > 0) {
+    strategies.push('Allocate assets to maximize CSRA protection');
+    strategies.push('Retitle Community Spouse Resource Allowance (CSRA) assets');
+    implementation.push('Create detailed asset allocation plan with elder law attorney');
+  }
+  
+  // Income maximization strategies
+  if (spouseNeeds.incomeGap > 0) {
+    strategies.push('Maximize income available to community spouse');
+    strategies.push('Review and adjust spousal income allowances if necessary');
+    implementation.push('Calculate and document Monthly Maintenance Needs Allowance (MMNA)');
+  }
+  
+  // Expanded resource allowance strategies
+  if (csraCalculation.expandedAllowanceRecommended) {
+    strategies.push('Pursue expanded resource allowance through fair hearing');
+    implementation.push('Prepare documentation showing need for additional resources');
+  }
+  
+  // Housing recommendations
+  const housingRecommendations = [];
+  if (assets.home && assets.home > 0) {
+    if (spouseNeeds.housingCosts > mmnaCalculation.baseAllowance * 0.5) {
+      housingRecommendations.push('Evaluate housing cost reduction options');
+      housingRecommendations.push('Ensure home is properly titled to community spouse');
     }
-  });
-
-  approach += "\nKey Considerations:\n";
-  approach += "- Transfers between spouses are exempt from transfer penalties\n";
-  approach += `- State-specific rules in ${situation.state} may affect these strategies\n`;
-  approach += "- Consult with an elder law attorney to implement these strategies effectively\n";
-
-  return approach;
+  }
+  
+  // Income maximization plan
+  const incomeMaximizationPlan = [];
+  if (spouseNeeds.needsIncomeAllowance) {
+    incomeMaximizationPlan.push('Document all community spouse expenses to maximize MMNA');
+    incomeMaximizationPlan.push(`Target monthly allowance: $${mmnaCalculation.totalAllowance.toFixed(2)}`);
+  }
+  
+  // Asset allocation plan
+  const resourceAllocationPlan = [];
+  if (csraCalculation.remainingAssets > 0) {
+    resourceAllocationPlan.push(`Allocate and retitle $${csraCalculation.csraAmount.toFixed(2)} to community spouse`);
+    resourceAllocationPlan.push('Consider converting excess assets to income through Medicaid-compliant annuity');
+  }
+  
+  // Legal action plan if needed
+  const legalActionPlan = csraCalculation.expandedAllowanceRecommended ? 
+    ['File for fair hearing to request increased resource allowance'] : [];
+  
+  return {
+    strategies,
+    implementation,
+    housingRecommendations,
+    incomeMaximizationPlan,
+    resourceAllocationPlan,
+    legalActionPlan,
+    assetRetitling: csraCalculation.remainingAssets > 0,
+    spousalAllowanceReview: spouseNeeds.needsIncomeAllowance
+  };
 }
 
 /**
  * Complete community spouse planning workflow
  * 
- * @param {Object} clientInfo - Client demographic information (not directly used)
+ * @param {Object} clientInfo - Client demographic information
  * @param {Object} assets - Client's asset data
+ * @param {Object} income - Client's income data
+ * @param {Object} expenses - Client's expense data
  * @param {string} state - The state of application
  * @returns {Promise<Object>} Complete community spouse planning result
  */
-async function medicaidCommunitySpousePlanning(clientInfo, assets, state) {
-  logger.info(`Starting Medicaid community spouse planning for ${state}`);
+async function communitySpousePlanning(clientInfo, assets, income, expenses, state) {
+  logger.info(`Starting community spouse planning for ${state}`);
+
+  // Skip if client is not married
+  if (clientInfo.maritalStatus !== 'married') {
+    logger.info('Client is not married, community spouse planning not applicable');
+    return {
+      status: 'not applicable',
+      message: 'Client is not married, no community spouse planning needed'
+    };
+  }
+
+  // Skip if both spouses need long-term care
+  if (clientInfo.spouseInfo && clientInfo.spouseInfo.needsLongTermCare) {
+    logger.info('Both spouses need long-term care, modifying community spouse planning');
+    return {
+      status: 'modified',
+      message: 'Both spouses need long-term care, standard community spouse rules don\'t apply',
+      dualApplicationConsiderations: [
+        'Both spouses may need separate Medicaid applications',
+        'Each spouse is treated as a separate household for eligibility',
+        'Different asset allocation strategies apply for dual-applicant couples'
+      ]
+    };
+  }
 
   try {
-    const rules = medicaidRules[state.toLowerCase()];
-    if (!rules) {
-      throw new Error(`No Medicaid rules found for state: ${state}`);
-    }
-
-    const situation = assessCommunitySpouseSituation(assets, state, rules);
-    const strategies = determineCommunitySpouseStrategies(situation);
-    const approach = planCommunitySpouseApproach(strategies, situation);
-
+    // Perform needs assessment
+    const spouseNeeds = assessCommunitySpouseNeeds(clientInfo, assets, income, expenses, state);
+    
+    // Calculate total countable assets (simplified for this example)
+    const totalAssets = Object.values(assets).reduce((sum, val) => 
+      typeof val === 'number' ? sum + val : sum, 0);
+    
+    // Calculate CSRA and MMNA
+    const csraCalculation = calculateCSRA(totalAssets, clientInfo, state);
+    const mmnaCalculation = calculateMMNA(spouseNeeds.spouseNeeds, clientInfo, state);
+    
+    // Develop strategies
+    const strategiesResult = developSpouseStrategies(
+      csraCalculation,
+      mmnaCalculation,
+      spouseNeeds.spouseNeeds,
+      clientInfo,
+      assets,
+      income,
+      state
+    );
+    
+    // Create planning report
+    const planningReport = {
+      summary: `Community spouse planning for ${clientInfo.name}'s spouse in ${state}`,
+      recommendations: strategiesResult.strategies,
+      nextSteps: strategiesResult.implementation
+    };
+    
     logger.info('Community spouse planning completed successfully');
 
     return {
-      situation,
-      strategies,
-      approach,
-      status: 'success'
+      status: 'success',
+      spouseNeeds,
+      csraCalculation,
+      mmnaCalculation,
+      strategies: strategiesResult.strategies,
+      implementation: strategiesResult.implementation,
+      planningReport
     };
   } catch (error) {
     logger.error(`Error in community spouse planning: ${error.message}`);
     return {
-      error: `Community spouse planning error: ${error.message}`,
-      status: 'error'
+      status: 'error',
+      error: `Community spouse planning error: ${error.message}`
     };
   }
 }
 
+// Export both function names for compatibility
 module.exports = {
-  assessCommunitySpouseSituation,
-  determineCommunitySpouseStrategies,
-  planCommunitySpouseApproach,
-  medicaidCommunitySpousePlanning
+  assessCommunitySpouseNeeds,
+  calculateCSRA,
+  calculateMMNA,
+  developSpouseStrategies,
+  communitySpousePlanning,
+  // For backward compatibility
+  medicaidCommunitySpousePlanning: communitySpousePlanning,
+  assessCommunitySpouseSituation: assessCommunitySpouseNeeds
 };
