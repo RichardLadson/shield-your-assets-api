@@ -1,93 +1,12 @@
 // src/services/planning/benefitRulesLoader.js
 const logger = require('../../config/logger');
+const benefitRules = require('../../data/benefit_rules_2025.json');
 
 /**
  * Loads benefit program rules for different states
  * This is a utility module to access rules for various benefit programs
  * beyond Medicaid (like SSI, Medicare, Veterans benefits, etc.)
  */
-
-// Mock data structure for benefit rules - in a real application, 
-// this would be loaded from a database or external files
-const benefitRules = {
-  "FLORIDA": {
-    "ssi": {
-      "individualFBR": 841,
-      "coupleFBR": 1261,
-      "resourceLimitIndividual": 2000,
-      "resourceLimitCouple": 3000
-    },
-    "medicare": {
-      "partAPremium": 0,
-      "partBPremium": 164.90,
-      "partBDeductible": 226,
-      "partDAvgPremium": 32.74
-    },
-    "snap": {
-      "maxBenefitIndividual": 281,
-      "maxBenefitCouple": 516,
-      "incomeLimit": 1473
-    },
-    "veteransBenefits": {
-      "basicPension": 1425,
-      "aidAndAttendance": 1881,
-      "housebound": 1744,
-      "survivorBenefit": 967
-    }
-  },
-  "NEW_YORK": {
-    "ssi": {
-      "individualFBR": 841,
-      "coupleFBR": 1261,
-      "stateSupplement": 87,
-      "resourceLimitIndividual": 2000,
-      "resourceLimitCouple": 3000
-    },
-    "medicare": {
-      "partAPremium": 0,
-      "partBPremium": 164.90,
-      "partBDeductible": 226,
-      "partDAvgPremium": 39.25
-    },
-    "snap": {
-      "maxBenefitIndividual": 281,
-      "maxBenefitCouple": 516,
-      "incomeLimit": 1473
-    },
-    "veteransBenefits": {
-      "basicPension": 1425,
-      "aidAndAttendance": 1881,
-      "housebound": 1744,
-      "survivorBenefit": 967
-    }
-  },
-  "CALIFORNIA": {
-    "ssi": {
-      "individualFBR": 841,
-      "coupleFBR": 1261,
-      "stateSupplement": 160,
-      "resourceLimitIndividual": 2000,
-      "resourceLimitCouple": 3000
-    },
-    "medicare": {
-      "partAPremium": 0,
-      "partBPremium": 164.90,
-      "partBDeductible": 226,
-      "partDAvgPremium": 28.50
-    },
-    "snap": {
-      "maxBenefitIndividual": 281,
-      "maxBenefitCouple": 516,
-      "incomeLimit": 1473
-    },
-    "veteransBenefits": {
-      "basicPension": 1425,
-      "aidAndAttendance": 1881,
-      "housebound": 1744,
-      "survivorBenefit": 967
-    }
-  }
-};
 
 /**
  * Gets all benefit program rules for a state
@@ -263,6 +182,9 @@ function updateBenefitRules(state, updates) {
   // Normalize state name
   const stateKey = state.toUpperCase().replace(/\s+/g, '_');
   
+  // Note: This only updates the in-memory version
+  // In a production system, you would want to persist changes to the JSON file
+  
   // Create state entry if it doesn't exist
   if (!benefitRules[stateKey]) {
     benefitRules[stateKey] = {};
@@ -281,6 +203,26 @@ function updateBenefitRules(state, updates) {
   return true;
 }
 
+/**
+ * Lists all available states in the benefit rules
+ * 
+ * @returns {Array} List of state names
+ */
+function getAvailableStates() {
+  return Object.keys(benefitRules);
+}
+
+/**
+ * Lists all available programs for a state
+ * 
+ * @param {string} state - State to check
+ * @returns {Array} List of program names
+ */
+function getAvailablePrograms(state) {
+  const stateRules = getBenefitRules(state);
+  return Object.keys(stateRules);
+}
+
 module.exports = {
   getBenefitRules,
   getProgramRules,
@@ -288,5 +230,7 @@ module.exports = {
   getMedicareCosts,
   getVeteransBenefitRates,
   getSNAPBenefits,
-  updateBenefitRules
+  updateBenefitRules,
+  getAvailableStates,
+  getAvailablePrograms
 };
