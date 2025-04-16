@@ -67,8 +67,8 @@ describe('Community Spouse Planning Module', () => {
       csraMaximum: 137400,
       mmnaMinimum: 3435,
       mmnaMaximum: 3435,
-      housingAllowance: 1,039.50,
-      excessShelterStandard: 1,039.50,
+      housingAllowance: 1039.50,
+      excessShelterStandard: 1039.50,
       applicantAllowance: 50,
       homeEquityLimit: 955000
     }

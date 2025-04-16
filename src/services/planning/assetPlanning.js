@@ -134,7 +134,7 @@ async function developAssetStrategies(assessment, homeEquity, clientInfo) {
       if (clientInfo.maritalStatus === 'married' && !clientInfo.spouseNeedsLTC) {
         implementationSteps.push('Transfer home to community spouse');
       } else if (clientInfo.dependentRelativeInHome) {
-        implementationSteps.push('Document dependent relative's residence in the home');
+        implementationSteps.push('Document dependent relative\'s residence in the home');          
       } else {
         implementationSteps.push('Consider home equity loan to reduce countable equity');
         implementationSteps.push('Evaluate sale of home and transition to care facility');
@@ -277,10 +277,12 @@ async function assetPlanning(clientInfo, assets, state) {
 
 // Export both function names for compatibility
 module.exports = {
+  assessAssets,
   assetPlanning,
   assessAssetSituation,
   assessHomeEquity,
   developAssetStrategies,
   implementAssetPlan,
   // For backward compatibility
-  medicaidAssetPlanning: assetPlanning
+  medicaidAssetPlanning: assetPlanning,
+};

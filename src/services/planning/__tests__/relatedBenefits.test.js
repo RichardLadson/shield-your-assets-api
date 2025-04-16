@@ -5,7 +5,7 @@ const {
   evaluateBenefitEligibility,
   developBenefitApplicationStrategies,
   relatedBenefitsPlanning
-} = require('../relatedBenefits');
+} = require('../relatedBenefits.js');
 
 describe('Related Benefits Planning Module', () => {
   // Basic client setup for tests
@@ -72,8 +72,8 @@ describe('Related Benefits Planning Module', () => {
     }
   };
 
-  // Mock the rules loader
-  jest.mock('../benefitRulesLoader', () => ({
+  // Mock the rules loader using the correct relative path.
+  jest.mock('../benefitRulesLoader.js', () => ({
     getBenefitRules: jest.fn((state) => {
       if (state === 'florida') {
         return mockBenefitRules.florida;
@@ -212,7 +212,7 @@ describe('Related Benefits Planning Module', () => {
       );
       
       expect(result.eligibilityResults['Medicare Savings Programs']).toHaveProperty('specificProgram');
-      // With income of $1200, should qualify for SLMB but not QMB
+      // With income of $1200, should qualify for SLMB
       expect(result.eligibilityResults['Medicare Savings Programs'].specificProgram).toBe('SLMB');
     });
 
@@ -239,7 +239,7 @@ describe('Related Benefits Planning Module', () => {
     test('should handle excess income correctly', () => {
       const possibleBenefits = ['SSI'];
       const income = {
-        social_security: 1500 // Over the $914 SSI limit
+        social_security: 1500 // Over the $914 SSI limit per mock
       };
       
       const result = evaluateBenefitEligibility(
@@ -297,7 +297,7 @@ describe('Related Benefits Planning Module', () => {
         'Medicare Savings Programs': { 
           eligible: true, 
           specificProgram: 'SLMB',
-          estimatedBenefit: 170.10 // Medicare Part B premium amount
+          estimatedBenefit: 170.10
         }
       };
       
@@ -372,7 +372,7 @@ describe('Related Benefits Planning Module', () => {
     test('should handle clients with multiple benefit eligibility', async () => {
       const clientInfo = {
         ...baseClientInfo,
-        monthlyIncome: 900, // Lower income to qualify for more programs
+        monthlyIncome: 900, // Lower income qualifies for more programs
         veteranStatus: 'veteran'
       };
       
@@ -390,7 +390,7 @@ describe('Related Benefits Planning Module', () => {
       
       // Should have multiple eligible benefits
       const eligibleCount = Object.values(result.eligibilityResults)
-        .filter(result => result.eligible).length;
+        .filter(res => res.eligible).length;
       expect(eligibleCount).toBeGreaterThan(2);
     });
 

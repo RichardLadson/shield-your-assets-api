@@ -1,6 +1,6 @@
 import os
 
-def print_tree(startpath, max_depth=4, output_file='structure.txt'):
+def print_tree(startpath, max_depth=6, output_file='structure.txt'):
     with open(output_file, 'w') as f:
         for root, dirs, files in os.walk(startpath):
             depth = root[len(startpath):].count(os.sep)
