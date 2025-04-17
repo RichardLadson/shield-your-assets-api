@@ -15,6 +15,24 @@ const eligibilityUtils = require('../eligibility/eligibilityUtils');
 function assessAnnuityOptions(clientInfo, assets, income, eligibilityStatus, options = {}) {
   logger.info(`Starting annuity planning for client in ${clientInfo}`);
   
+  // CRITICAL FIX: Check if client is already resource eligible
+  if (eligibilityStatus && eligibilityStatus.isResourceEligible === true) {
+    // If already eligible, return immediately with isAppropriate = false
+    return {
+      isAppropriate: false,
+      totalCountableAssets: 0,
+      excessAssets: 0,
+      csra: clientInfo.maritalStatus === 'married' ? 148620 : null,
+      reasons: ['Client is already eligible for Medicaid based on resource level'],
+      suitableAssets: [],
+      spouseConsiderations: null,
+      ageConsiderations: generateAgeConsiderations(clientInfo),
+      taxConsiderations: generateTaxConsiderations(assets),
+      liquidAssets: calculateLiquidAssets(assets),
+      incomeNeeds: calculateIncomeNeeds(clientInfo, income)
+    };
+  }
+  
   // Calculate total countable assets
   let totalCountableAssets = 0;
   for (const [key, value] of Object.entries(assets)) {
@@ -802,21 +820,21 @@ function getAlternatives(clientInfo, excessAssets) {
   }
   
   return alternatives;
-}
-
-module.exports = {
-  annuityPlanning,
-  assessAnnuityOptions,
-  calculateAnnuityParameters,
-  developAnnuityRecommendations,
-  isExemptAsset,
-  determineAnnuityAppropriateness,
-  calculateLiquidAssets,
-  calculateIncomeNeeds,
-  generateImplementationSteps,
-  getAlternatives,
-  identifySuitableAssets,
-  generateRecommendationReasons,
-  generateAgeConsiderations,
-  generateTaxConsiderations
-};
+  }
+  
+  module.exports = {
+    annuityPlanning,
+    assessAnnuityOptions,
+    calculateAnnuityParameters,
+    developAnnuityRecommendations,
+    isExemptAsset,
+    determineAnnuityAppropriateness,
+    calculateLiquidAssets,
+    calculateIncomeNeeds,
+    generateImplementationSteps,
+    getAlternatives,
+    identifySuitableAssets,
+    generateRecommendationReasons,
+    generateAgeConsiderations,
+    generateTaxConsiderations
+  };
