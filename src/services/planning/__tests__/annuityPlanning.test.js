@@ -1,5 +1,3 @@
-// src/services/planning/__tests__/annuityPlanning.test.js
-
 const { 
   assessAnnuityOptions,
   calculateAnnuityParameters,
@@ -70,22 +68,25 @@ describe('Annuity Planning Module', () => {
   };
 
   // Mock the rules loader
-  jest.mock('../medicaidRulesLoader', () => ({
-    getMedicaidRules: jest.fn((state) => {
-      if (state === 'florida') {
-        return mockRules.florida;
-      } else if (state === 'newyork') {
-        return mockRules.newyork;
-      } else {
-        throw new Error(`Rules not found for state: ${state}`);
-      }
-    })
-  }));
+// Mock the rules loader
+jest.mock('../../utils/medicaidRulesLoader', () => ({
+  loadMedicaidRules: jest.fn().mockImplementation((state) => {
+    if (state === 'florida') {
+      return mockRules.florida;
+    } else if (state === 'newyork') {
+      return mockRules.newyork;
+    } else if (state === 'default') {
+      return mockRules.florida; // Use Florida rules for default state
+    } else {
+      throw new Error(`Rules not found for state: ${state}`);
+    }
+  })
+}));
 
   // Unit tests for assessAnnuityOptions
   describe('assessAnnuityOptions', () => {
-    test('should correctly identify if annuity is appropriate for single person', () => {
-      const result = assessAnnuityOptions(
+    test('should correctly identify if annuity is appropriate for single person', async () => {
+      const result = await assessAnnuityOptions(
         baseClientInfo,
         baseAssets,
         baseIncome,
@@ -98,8 +99,8 @@ describe('Annuity Planning Module', () => {
       expect(result.reasons).toBeInstanceOf(Array);
     });
 
-    test('should recommend annuity for excess resources', () => {
-      const result = assessAnnuityOptions(
+    test('should recommend annuity for excess resources', async () => {
+      const result = await assessAnnuityOptions(
         baseClientInfo,
         baseAssets,
         baseIncome,
@@ -108,10 +109,10 @@ describe('Annuity Planning Module', () => {
       );
       
       expect(result.isAppropriate).toBe(true);
-      expect(result.reasons).toContain(expect.stringMatching(/excess resources/i));
+      expect(result.reasons).toContainEqual(expect.stringMatching(/excess resources/i));
     });
 
-    test('should not recommend annuity when already eligible', () => {
+    test('should not recommend annuity when already eligible', async () => {
       const eligResults = {
         isResourceEligible: true,
         isIncomeEligible: true,
@@ -119,7 +120,7 @@ describe('Annuity Planning Module', () => {
         resourceLimit: 2000
       };
       
-      const result = assessAnnuityOptions(
+      const result = await assessAnnuityOptions(
         baseClientInfo,
         baseAssets,
         baseIncome,
@@ -128,11 +129,11 @@ describe('Annuity Planning Module', () => {
       );
       
       expect(result.isAppropriate).toBe(false);
-      expect(result.reasons).toContain(expect.stringMatching(/already eligible/i));
+      expect(result.reasons).toContainEqual(expect.stringMatching(/already eligible/i));
     });
 
-    test('should consider appropriate assets for annuity conversion', () => {
-      const result = assessAnnuityOptions(
+    test('should consider appropriate assets for annuity conversion', async () => {
+      const result = await assessAnnuityOptions(
         baseClientInfo,
         baseAssets,
         baseIncome,
@@ -150,7 +151,7 @@ describe('Annuity Planning Module', () => {
       expect(hasRetirement).toBe(true);
     });
 
-    test('should recommend annuity for community spouse', () => {
+    test('should recommend annuity for community spouse', async () => {
       const clientInfo = {
         ...baseClientInfo,
         maritalStatus: 'married',
@@ -163,7 +164,7 @@ describe('Annuity Planning Module', () => {
         }
       };
       
-      const result = assessAnnuityOptions(
+      const result = await assessAnnuityOptions(
         clientInfo,
         baseAssets,
         baseIncome,
@@ -173,10 +174,10 @@ describe('Annuity Planning Module', () => {
       
       expect(result.isAppropriate).toBe(true);
       expect(result.spouseConsiderations).toBeDefined();
-      expect(result.spouseConsiderations).toContain(expect.stringMatching(/community spouse/i));
+      expect(result.spouseConsiderations).toContainEqual(expect.stringMatching(/community spouse/i));
     });
 
-    test('should adjust recommendations based on client age', () => {
+    test('should adjust recommendations based on client age', async () => {
       const youngerClient = {
         ...baseClientInfo,
         age: 60
@@ -187,7 +188,7 @@ describe('Annuity Planning Module', () => {
         age: 90
       };
       
-      const resultYounger = assessAnnuityOptions(
+      const resultYounger = await assessAnnuityOptions(
         youngerClient,
         baseAssets,
         baseIncome,
@@ -195,7 +196,7 @@ describe('Annuity Planning Module', () => {
         baseState
       );
       
-      const resultOlder = assessAnnuityOptions(
+      const resultOlder = await assessAnnuityOptions(
         olderClient,
         baseAssets,
         baseIncome,
@@ -209,8 +210,8 @@ describe('Annuity Planning Module', () => {
       expect(resultYounger.ageConsiderations).not.toEqual(resultOlder.ageConsiderations);
     });
 
-    test('should identify tax implications of annuity conversion', () => {
-      const result = assessAnnuityOptions(
+    test('should identify tax implications of annuity conversion', async () => {
+      const result = await assessAnnuityOptions(
         baseClientInfo,
         {
           ...baseAssets,
@@ -222,7 +223,7 @@ describe('Annuity Planning Module', () => {
       );
       
       expect(result.taxConsiderations).toBeDefined();
-      expect(result.taxConsiderations).toContain(expect.stringMatching(/tax/i));
+      expect(result.taxConsiderations).toContainEqual(expect.stringMatching(/tax/i));
     });
   });
 
@@ -318,7 +319,7 @@ describe('Annuity Planning Module', () => {
       );
       
       expect(result.incomeConsiderations).toBeDefined();
-      expect(result.incomeConsiderations).toContain(expect.stringMatching(/excess income/i));
+      expect(result.incomeConsiderations).toContainEqual(expect.stringMatching(/excess income/i));
     });
 
     test('should provide minimum state-compliant term', () => {
@@ -357,7 +358,7 @@ describe('Annuity Planning Module', () => {
       );
       
       expect(result.warnings).toBeDefined();
-      expect(result.warnings).toContain(expect.stringMatching(/exceeds life expectancy/i));
+      expect(result.warnings).toContainEqual(expect.stringMatching(/exceeds life expectancy/i));
       expect(result.isCompliant).toBe(false);
     });
   });
@@ -452,7 +453,7 @@ describe('Annuity Planning Module', () => {
       );
       
       expect(result.complianceRequirements).toBeDefined();
-      expect(result.complianceRequirements).toContain(expect.stringMatching(/state/i));
+      expect(result.complianceRequirements).toContainEqual(expect.stringMatching(/state/i));
     });
 
     test('should provide coordination requirements with other planning', () => {
@@ -481,7 +482,7 @@ describe('Annuity Planning Module', () => {
       );
       
       expect(result.planningCoordination).toBeDefined();
-      expect(result.planningCoordination).toContain(expect.stringMatching(/timing/i));
+      expect(result.planningCoordination).toContainEqual(expect.stringMatching(/timing/i));
     });
 
     test('should not provide recommendations when annuity is inappropriate', () => {
@@ -501,7 +502,7 @@ describe('Annuity Planning Module', () => {
         baseState
       );
       
-      expect(result.recommendations).toContain(expect.stringMatching(/not recommended/i));
+      expect(result.recommendations).toContainEqual(expect.stringMatching(/not recommended/i));
     });
 
     test('should recommend alternative strategies when annuity isn\'t ideal', () => {
@@ -562,7 +563,7 @@ describe('Annuity Planning Module', () => {
       );
       
       expect(result.options.isAppropriate).toBe(false);
-      expect(result.recommendations).toContain(expect.stringMatching(/not recommended/i));
+      expect(result.recommendations).toContainEqual(expect.stringMatching(/not recommended/i));
     });
 
     test('should handle married couples with community spouse considerations', async () => {
@@ -587,7 +588,7 @@ describe('Annuity Planning Module', () => {
       );
       
       expect(result.options.spouseConsiderations).toBeDefined();
-      expect(result.recommendations).toContain(expect.stringMatching(/spouse/i));
+      expect(result.recommendations).toContainEqual(expect.stringMatching(/spouse/i));
     });
 
     test('should handle errors gracefully', async () => {

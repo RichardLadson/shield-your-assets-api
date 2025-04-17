@@ -1,9 +1,14 @@
-// src/services/planning/__tests__/carePlanning.test.js
 const {
   assessCareNeeds,
   determineCareStrategies,
   planCareApproach,
-  medicaidCarePlanning
+  medicaidCarePlanning,
+  assessCognitiveStatus,
+  assessFunctionalStatus,
+  assessBehavioralStatus,
+  assessSafetyRisks,
+  assessCaregiverSupport,
+  determineCareLevelFromAssessment
 } = require('../carePlanning');
 
 // Mock the dependencies
@@ -30,18 +35,35 @@ describe('Care Planning Module', () => {
   // Sample test data
   const clientInfo = {
     name: 'Test Client',
-    age: 85
+    age: 85,
+    financialInfo: {
+      monthlyIncome: 1500,
+      liquidAssets: 50000
+    },
+    preferenceInfo: {
+      preferredSetting: 'home',
+      valuesPriority: ['independence', 'comfort', 'safety']
+    }
   };
   
   const medicalInfo = {
     adlLimitations: ['bathing', 'dressing', 'toileting', 'transferring', 'continence'],
+    iadlLimitations: ['medication management', 'meal preparation', 'transportation'],
     diagnoses: ['Dementia', 'Hypertension', 'Diabetes'],
-    mobility: 'wheelchair'
+    mobility: 'wheelchair',
+    cognitionNotes: 'moderate memory impairment',
+    mmseScore: 18,
+    behavioralSymptoms: ['wandering', 'sundowning']
   };
   
   const livingInfo = {
     currentSetting: 'home',
-    caregiverSupport: 'family'
+    caregiverSupport: 'family',
+    caregiverType: 'spouse',
+    homeEnvironment: {
+      hasStairs: true,
+      hasBathSafety: false
+    }
   };
   
   const state = 'florida';
@@ -51,44 +73,32 @@ describe('Care Planning Module', () => {
   });
   
   describe('assessCareNeeds', () => {
-    test('should assess care needs correctly', () => {
-      const careNeeds = assessCareNeeds(medicalInfo, livingInfo, state);
-      
+    test('should assess care needs correctly with full data', () => {
+      const careNeeds = assessCareNeeds(medicalInfo, livingInfo, clientInfo.financialInfo, clientInfo.preferenceInfo, state);
       expect(careNeeds).toHaveProperty('recommendedCareLevel');
       expect(careNeeds).toHaveProperty('diagnoses');
       expect(careNeeds).toHaveProperty('adlCount');
       expect(careNeeds).toHaveProperty('currentSetting');
       expect(careNeeds).toHaveProperty('caregiverSupport');
+      expect(careNeeds).toHaveProperty('assessment');
+      expect(careNeeds).toHaveProperty('detailedRecommendations');
       expect(careNeeds.diagnoses).toContain('Dementia');
       expect(careNeeds.adlCount).toBe(5);
       expect(careNeeds.recommendedCareLevel).toBe('nursing');
     });
     
     test('should handle missing data gracefully', () => {
-      const minimalMedicalInfo = {
-        diagnoses: ['Dementia']
-      };
-      
-      const minimalLivingInfo = {};
-      
-      const careNeeds = assessCareNeeds(minimalMedicalInfo, minimalLivingInfo, state);
-      
-      expect(careNeeds).toHaveProperty('recommendedCareLevel');
-      expect(careNeeds.diagnoses).toEqual(['Dementia']);
-      // Should handle missing ADL count
+      const minimalMedicalInfo = { diagnoses: ['Dementia'], cognitionNotes: 'mild' };
+      const careNeeds = assessCareNeeds(minimalMedicalInfo, {}, null, null, state);
+      expect(careNeeds.recommendedCareLevel).toBe('in-home');
       expect(careNeeds.adlCount).toBe(0);
-      // Should still recommend nursing home due to dementia
-      expect(careNeeds.recommendedCareLevel).toBe('nursing');
+      expect(careNeeds.assessment.cognitiveStatus.severity).toBe('mild');
     });
     
     test('should handle completely empty inputs', () => {
-      const emptyMedicalInfo = {};
-      const emptyLivingInfo = {};
-      
-      const careNeeds = assessCareNeeds(emptyMedicalInfo, emptyLivingInfo, state);
-      
-      expect(careNeeds).toBeDefined();
+      const careNeeds = assessCareNeeds({}, {}, null, null, state);
       expect(careNeeds.recommendedCareLevel).toBe('in-home');
+      expect(careNeeds.adlCount).toBe(0);
     });
     
     test('should recommend assisted living for moderate needs', () => {
@@ -96,26 +106,82 @@ describe('Care Planning Module', () => {
         adlLimitations: ['bathing', 'dressing'],
         diagnoses: ['Arthritis']
       };
-      
-      const careNeeds = assessCareNeeds(moderateMedicalInfo, livingInfo, state);
-      
+      const careNeeds = assessCareNeeds(moderateMedicalInfo, livingInfo, null, null, state);
       expect(careNeeds.recommendedCareLevel).toBe('assisted living');
     });
     
-    test('should recommend in-home care for minimal needs with caregiver support', () => {
-      const minimalMedicalInfo = {
-        adlLimitations: ['bathing'],
-        diagnoses: ['Hypertension']
+    test('should recommend in-home care for mild dementia with strong support', () => {
+      const mildMedicalInfo = {
+        diagnoses: ['Dementia'],
+        cognitionNotes: 'mild',
+        adlLimitations: ['bathing']
       };
-      
       const strongSupportInfo = {
         currentSetting: 'home',
         caregiverSupport: 'full-time'
       };
-      
-      const careNeeds = assessCareNeeds(minimalMedicalInfo, strongSupportInfo, state);
-      
+      const careNeeds = assessCareNeeds(mildMedicalInfo, strongSupportInfo, null, null, state);
       expect(careNeeds.recommendedCareLevel).toBe('in-home');
+    });
+    
+    test('should recommend nursing for severe dementia', () => {
+      const severeMedicalInfo = {
+        diagnoses: ['Dementia'],
+        cognitionNotes: 'severe',
+        mmseScore: 8,
+        adlLimitations: ['bathing', 'dressing', 'toileting']
+      };
+      const careNeeds = assessCareNeeds(severeMedicalInfo, livingInfo, null, null, state);
+      expect(careNeeds.recommendedCareLevel).toBe('nursing');
+    });
+  });
+  
+  describe('Individual Assessment Functions', () => {
+    test('should assess cognitive status correctly', () => {
+      const cognitiveStatus = assessCognitiveStatus(medicalInfo);
+      expect(cognitiveStatus.hasDementia).toBe(true);
+      expect(cognitiveStatus.severity).toBe('moderate');
+      expect(cognitiveStatus.mmseScore).toBe(18);
+    });
+    
+    test('should assess functional status correctly', () => {
+      const functionalStatus = assessFunctionalStatus(medicalInfo);
+      expect(functionalStatus.adlDependencies).toBe(5);
+      expect(functionalStatus.iadlDependencies).toBe(3);
+      expect(functionalStatus.interpretation).toBe('severely dependent');
+    });
+    
+    test('should assess behavioral status correctly', () => {
+      const behavioralStatus = assessBehavioralStatus(medicalInfo);
+      expect(behavioralStatus.hasBehavioralSymptoms).toBe(true);
+      expect(behavioralStatus.symptoms).toContain('wandering');
+      expect(behavioralStatus.hasHighRiskBehaviors).toBe(true);
+    });
+    
+    test('should assess safety risks correctly', () => {
+      const safetyRisks = assessSafetyRisks(medicalInfo, livingInfo);
+      expect(safetyRisks.specific.wandering).toBe('high');
+      expect(safetyRisks.overall).toBe('high');
+    });
+    
+    test('should assess caregiver support correctly', () => {
+      const caregiverSupport = assessCaregiverSupport(livingInfo);
+      expect(caregiverSupport.hasCaregiver).toBe(true);
+      expect(caregiverSupport.burnoutRisk).toBeDefined();
+    });
+    
+    test('should use weighted scoring system correctly', () => {
+      const assessment = {
+        cognitiveStatus: { hasDementia: false, severity: 'none' },
+        functionalStatus: { adlDependencies: 5, interpretation: 'severely dependent' },
+        behavioralStatus: { severity: 'none', hasHighRiskBehaviors: false },
+        safetyRisks: { overall: 'low', specific: { wandering: 'low' } },
+        caregiverSupport: { level: 'extensive', burnoutRisk: 'low' },
+        financialResources: { canAffordInHomeCare: true },
+        preferences: { preferredSetting: 'home' }
+      };
+      const recommendedLevel = determineCareLevelFromAssessment(assessment);
+      expect(recommendedLevel).toBe('nursing');
     });
   });
   
@@ -124,52 +190,69 @@ describe('Care Planning Module', () => {
       const careNeeds = {
         recommendedCareLevel: 'nursing',
         diagnoses: ['Dementia'],
-        adlCount: 5
+        adlCount: 5,
+        assessment: {
+          cognitiveStatus: { hasDementia: true, severity: 'moderate' },
+          safetyRisks: { overall: 'high' }
+        }
       };
-      
       const strategies = determineCareStrategies(careNeeds);
-      
       expect(strategies).toContain('Plan for skilled nursing facility placement');
-      expect(strategies).toContain('Evaluate long-term care insurance coverage or Medicaid eligibility');
+      expect(strategies).toContain('Research memory care units within nursing facilities');
     });
     
     test('should recommend assisted living for moderate needs', () => {
       const careNeeds = {
         recommendedCareLevel: 'assisted living',
         diagnoses: ['Arthritis'],
-        adlCount: 2
+        adlCount: 2,
+        assessment: {
+          cognitiveStatus: { hasDementia: false },
+          safetyRisks: { specific: { falls: 'high' } }
+        }
       };
-      
       const strategies = determineCareStrategies(careNeeds);
-      
       expect(strategies).toContain('Research assisted living facilities near family members');
-      expect(strategies).toContain('Evaluate income and asset availability for private pay or waiver programs');
+      expect(strategies).toContain('Prioritize facilities with fall prevention programs');
     });
     
     test('should recommend home care for minimal needs', () => {
       const careNeeds = {
         recommendedCareLevel: 'in-home',
         diagnoses: ['Hypertension'],
-        adlCount: 1
+        adlCount: 1,
+        assessment: {
+          safetyRisks: { overall: 'moderate' },
+          caregiverSupport: { burnoutRisk: 'high' }
+        }
       };
-      
       const strategies = determineCareStrategies(careNeeds);
-      
       expect(strategies).toContain('Coordinate home care services through local agencies');
-      expect(strategies).toContain('Apply for Medicaid waiver programs if care needs meet criteria');
+      expect(strategies).toContain('Conduct home safety evaluation and implement modifications');
+      expect(strategies).toContain('Arrange for respite care services to support primary caregiver');
     });
     
     test('should handle unknown care level gracefully', () => {
       const careNeeds = {
         recommendedCareLevel: 'unknown',
         diagnoses: ['Other'],
-        adlCount: 0
+        adlCount: 0,
+        assessment: {}
       };
-      
       const strategies = determineCareStrategies(careNeeds);
-      
-      // Should default to in-home strategies
       expect(strategies).toContain('Coordinate home care services through local agencies');
+    });
+    
+    test('should include universal strategies for all clients', () => {
+      const careNeeds = {
+        recommendedCareLevel: 'in-home',
+        diagnoses: ['Hypertension'],
+        adlCount: 1,
+        assessment: {}
+      };
+      const strategies = determineCareStrategies(careNeeds);
+      expect(strategies).toContain('Ensure advance directives and healthcare proxy are in place');
+      expect(strategies).toContain('Establish regular reassessment schedule based on care needs');
     });
   });
   
@@ -179,25 +262,31 @@ describe('Care Planning Module', () => {
         'Plan for skilled nursing facility placement',
         'Evaluate long-term care insurance coverage or Medicaid eligibility'
       ];
-      
       const careNeeds = {
         recommendedCareLevel: 'nursing',
         diagnoses: ['Dementia', 'Diabetes'],
         adlCount: 5,
         currentSetting: 'home',
         caregiverSupport: 'family',
-        state: 'florida'
+        state: 'florida',
+        assessment: {
+          cognitiveStatus: { severity: 'moderate' },
+          safetyRisks: { overall: 'high' },
+          functionalStatus: { interpretation: 'severely dependent' }
+        },
+        detailedRecommendations: {
+          alternativeOptions: [],
+          requiresReassessment: true
+        }
       };
-      
       const approach = planCareApproach(strategies, careNeeds);
-      
       expect(approach).toContain('Care Planning Approach');
       expect(approach).toContain('Recommended Level of Care: NURSING');
       expect(approach).toContain('Diagnoses: Dementia, Diabetes');
-      expect(approach).toContain('ADL Limitations: 5');
       expect(approach).toContain('Plan for skilled nursing facility placement');
-      expect(approach).toContain('Evaluate long-term care insurance coverage');
-      expect(approach).toContain('Next Steps');
+      expect(approach).toContain('Assessment Details');
+      expect(approach).toContain('Cognitive Status: moderate impairment');
+      expect(approach).toContain('Schedule reassessment within 30 days due to high-risk factors');
     });
     
     test('should include all provided strategies in the approach', () => {
@@ -206,18 +295,16 @@ describe('Care Planning Module', () => {
         'Strategy 2',
         'Strategy 3'
       ];
-      
       const careNeeds = {
         recommendedCareLevel: 'assisted living',
         diagnoses: ['Arthritis'],
         adlCount: 2,
         currentSetting: 'home',
         caregiverSupport: 'none',
-        state: 'florida'
+        state: 'florida',
+        assessment: {}
       };
-      
       const approach = planCareApproach(strategies, careNeeds);
-      
       strategies.forEach(strategy => {
         expect(approach).toContain(strategy);
       });
@@ -231,11 +318,10 @@ describe('Care Planning Module', () => {
         adlCount: 0,
         currentSetting: 'home',
         caregiverSupport: 'family',
-        state: 'newyork'
+        state: 'newyork',
+        assessment: {}
       };
-      
       const approach = planCareApproach(strategies, careNeeds);
-      
       expect(approach).toContain('Review Medicaid waiver programs available in newyork');
     });
     
@@ -247,22 +333,45 @@ describe('Care Planning Module', () => {
         adlCount: 1,
         currentSetting: 'home',
         caregiverSupport: 'family',
-        state: 'florida'
+        state: 'florida',
+        assessment: {}
       };
-      
       const approach = planCareApproach(strategies, careNeeds);
-      
-      // Should still create a plan even with no strategies
       expect(approach).toContain('Care Planning Approach');
       expect(approach).toContain('Recommended Level of Care');
       expect(approach).toContain('Next Steps');
+    });
+    
+    test('should include alternative options when available', () => {
+      const strategies = ['Primary strategy'];
+      const careNeeds = {
+        recommendedCareLevel: 'nursing',
+        diagnoses: ['Dementia'],
+        adlCount: 5,
+        currentSetting: 'home',
+        caregiverSupport: 'family',
+        state: 'florida',
+        assessment: {},
+        detailedRecommendations: {
+          alternativeOptions: [
+            {
+              option: 'assisted living with memory care',
+              conditions: 'With 24/7 supervision and secured memory unit'
+            }
+          ],
+          requiresReassessment: false
+        }
+      };
+      const approach = planCareApproach(strategies, careNeeds);
+      expect(approach).toContain('Alternative Care Options');
+      expect(approach).toContain('assisted living with memory care');
+      expect(approach).toContain('With 24/7 supervision and secured memory unit');
     });
   });
   
   describe('medicaidCarePlanning', () => {
     test('should complete the care planning process successfully', async () => {
       const result = await medicaidCarePlanning(clientInfo, medicalInfo, livingInfo, state);
-      
       expect(result.status).toBe('success');
       expect(result).toHaveProperty('careNeeds');
       expect(result).toHaveProperty('strategies');
@@ -272,52 +381,47 @@ describe('Care Planning Module', () => {
     });
     
     test('should handle errors gracefully', async () => {
-      // Mock assessCareNeeds to throw an error
-      const originalAssessCareNeeds = assessCareNeeds;
-      global.assessCareNeeds = jest.fn().mockImplementation(() => {
-        throw new Error('Mock assessment error');
-      });
-      
-      const result = await medicaidCarePlanning(clientInfo, medicalInfo, livingInfo, state);
-      
+      const medicalInfoWithError = { mockError: true };
+      const result = await medicaidCarePlanning(clientInfo, medicalInfoWithError, livingInfo, state);
       expect(result.status).toBe('error');
       expect(result).toHaveProperty('error');
       expect(result.error).toContain('Mock assessment error');
-      
-      // Restore the original function
-      global.assessCareNeeds = originalAssessCareNeeds;
     });
     
     test('should process data for different states correctly', async () => {
       const flResult = await medicaidCarePlanning(clientInfo, medicalInfo, livingInfo, 'florida');
       const nyResult = await medicaidCarePlanning(clientInfo, medicalInfo, livingInfo, 'newyork');
-      
       expect(flResult.status).toBe('success');
       expect(nyResult.status).toBe('success');
-      
-      // Both should recommend nursing due to diagnosis
       expect(flResult.careNeeds.recommendedCareLevel).toBe('nursing');
       expect(nyResult.careNeeds.recommendedCareLevel).toBe('nursing');
-      
-      // State should be retained correctly
       expect(flResult.careNeeds.state).toBe('florida');
       expect(nyResult.careNeeds.state).toBe('newyork');
     });
     
     test('should handle minimal valid inputs', async () => {
-      const minimalClientInfo = { age: 75 };
-      const minimalMedicalInfo = { diagnoses: [] };
-      const minimalLivingInfo = {};
-      
-      const result = await medicaidCarePlanning(
-        minimalClientInfo,
-        minimalMedicalInfo,
-        minimalLivingInfo,
-        state
-      );
-      
+      const result = await medicaidCarePlanning({}, {}, {}, state);
       expect(result.status).toBe('success');
       expect(result.careNeeds.recommendedCareLevel).toBe('in-home');
+    });
+    
+    test('should extract and use financial and preference info from clientInfo', async () => {
+      const clientWithFinancialInfo = {
+        name: 'Test Client',
+        age: 75,
+        financialInfo: { monthlyIncome: 3000, liquidAssets: 80000 },
+        preferenceInfo: { preferredSetting: 'assisted living' }
+      };
+      const result = await medicaidCarePlanning(
+        clientWithFinancialInfo,
+        { diagnoses: ['Arthritis'], adlLimitations: ['bathing', 'dressing'] },
+        { caregiverSupport: 'none' },
+        state
+      );
+      expect(result.status).toBe('success');
+      expect(result.careNeeds.assessment.financialResources).toBeDefined();
+      expect(result.careNeeds.assessment.preferences).toBeDefined();
+      expect(result.careNeeds.assessment.financialResources.canAffordAssistedLiving).toBe(true);
     });
   });
 });
