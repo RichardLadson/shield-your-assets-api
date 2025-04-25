@@ -1,0 +1,96 @@
+{
+    "state": "Wisconsin",
+    "homeExemptions": {
+      "primary": true,
+      "conditions": [
+        "intent to return if institutionalized",
+        "spouse resides",
+        "minor child resides",
+        "blind or disabled child resides"
+      ],
+      "postDeathTreatment": "subject to recovery from probate and certain non-probate assets if no protected heirs remain",
+      "exceptions": ["hardship waiver may apply"],
+      "strength": "moderate"
+    },
+    "recoveryScope": {
+      "aggressiveness": "moderate",
+      "optionalRecovery": true,
+      "tefraLiens": true,
+      "expandedEstate": true,
+      "nonProbateTransfersPursued": true
+    },
+    "recoveryTimeframes": {
+      "lookBackYears": 5,
+      "claimDeadlineAfterDeathMonths": 4,
+      "statuteLimit": "4 months from notice to creditors; state may initiate probate if necessary"
+    },
+    "assetProtections": {
+      "homeEquityLimit": null,
+      "recoveryThresholdDollar": null,
+      "protectedAssets": [],
+      "minimumEstateForRecovery": null
+    },
+    "recoveryWaivers": {
+      "hardshipAvailable": true,
+      "criteria": [
+        "eviction or homelessness",
+        "loss of primary residence",
+        "financial hardship or economic ruin"
+      ],
+      "exemptHeirs": [
+        "surviving spouse",
+        "child under 21",
+        "blind or disabled child"
+      ],
+      "ageExemptions": false
+    },
+    "incomeTrustPolicies": {
+      "requiresQIT": true,
+      "spendDownType": "none (income-cap state)",
+      "incomeDisregards": []
+    },
+    "spousalProtections": {
+      "csra": 148620,
+      "mmna": 3715,
+      "jointPropertyTreatment": "may be subject to recovery depending on transfer mechanism",
+      "additionalProtections": ["no recovery from estate of surviving spouse"]
+    },
+    "administrative": {
+      "agency": "Wisconsin Department of Health Services (DHS), Estate Recovery Program (ERP)",
+      "appealAvailable": true,
+      "settlementAllowed": true,
+      "costBenefitEvaluation": true
+    },
+    "programEffectiveness": {
+      "annualRecovery": 30000000,
+      "percentMedicaidBudget": 0.001,
+      "estatesPursued": "probate estates and some non-probate assets including revocable trusts, joint tenancy, and life estates",
+      "avgRecoveryPerEstate": null
+    },
+    "legalEnvironment": {
+      "recentCases": [],
+      "legislationChanges": [
+        "2013 expansion of estate recovery",
+        "2015 partial repeal of non-probate recovery elements"
+      ],
+      "pendingChanges": false,
+      "regionalVariation": false
+    },
+    "strategicConsiderations": {
+      "effectiveStrategies": [
+        "use irrevocable trusts to protect assets from expanded recovery",
+        "avoid revocable trusts, joint tenancy, and life estates where possible",
+        "set up QIT early for over-income applicants",
+        "document hardship waiver eligibility in advance"
+      ],
+      "relevantPrecedents": [],
+      "usefulInstruments": [
+        "QIT",
+        "irrevocable trust",
+        "TOD deed",
+        "beneficiary designation",
+        "hardship waiver documentation"
+      ]
+    }
+  }
+  

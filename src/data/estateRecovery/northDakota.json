@@ -1,0 +1,94 @@
+{
+    "state": "North Dakota",
+    "homeExemptions": {
+      "primary": true,
+      "conditions": [
+        "intent to return if institutionalized",
+        "spouse resides",
+        "minor child resides",
+        "blind or disabled child resides"
+      ],
+      "postDeathTreatment": "subject to recovery only if home passes through probate and no protected heirs remain",
+      "exceptions": ["hardship waiver may apply"],
+      "strength": "strong"
+    },
+    "recoveryScope": {
+      "aggressiveness": "limited",
+      "optionalRecovery": false,
+      "tefraLiens": true,
+      "expandedEstate": false,
+      "nonProbateTransfersPursued": false
+    },
+    "recoveryTimeframes": {
+      "lookBackYears": 5,
+      "claimDeadlineAfterDeathMonths": 3,
+      "statuteLimit": "3 months from notice of probate"
+    },
+    "assetProtections": {
+      "homeEquityLimit": null,
+      "recoveryThresholdDollar": null,
+      "protectedAssets": [],
+      "minimumEstateForRecovery": null
+    },
+    "recoveryWaivers": {
+      "hardshipAvailable": true,
+      "criteria": [
+        "eviction or homelessness",
+        "loss of primary residence",
+        "significant financial distress"
+      ],
+      "exemptHeirs": [
+        "surviving spouse",
+        "child under 21",
+        "blind or disabled child"
+      ],
+      "ageExemptions": false
+    },
+    "incomeTrustPolicies": {
+      "requiresQIT": true,
+      "spendDownType": "none (income-cap state)",
+      "incomeDisregards": []
+    },
+    "spousalProtections": {
+      "csra": 148620,
+      "mmna": 3715,
+      "jointPropertyTreatment": "not subject to recovery if it avoids probate",
+      "additionalProtections": ["no recovery from estate of surviving spouse"]
+    },
+    "administrative": {
+      "agency": "North Dakota Department of Health and Human Services (NDHHS)",
+      "appealAvailable": true,
+      "settlementAllowed": true,
+      "costBenefitEvaluation": true
+    },
+    "programEffectiveness": {
+      "annualRecovery": 4000000,
+      "percentMedicaidBudget": 0.0003,
+      "estatesPursued": "probate estates with real property or liquid assets",
+      "avgRecoveryPerEstate": null
+    },
+    "legalEnvironment": {
+      "recentCases": [],
+      "legislationChanges": [],
+      "pendingChanges": false,
+      "regionalVariation": false
+    },
+    "strategicConsiderations": {
+      "effectiveStrategies": [
+        "use revocable trusts, joint tenancy, and TOD deeds to avoid probate",
+        "establish QIT if income exceeds eligibility threshold",
+        "apply for hardship waivers with documented proof of financial hardship",
+        "ensure assets pass outside probate where legally permitted"
+      ],
+      "relevantPrecedents": [],
+      "usefulInstruments": [
+        "QIT",
+        "revocable living trust",
+        "joint account setup",
+        "TOD deed",
+        "hardship waiver application"
+      ]
+    }
+  }
+
+  

@@ -1,0 +1,95 @@
+{
+    "state": "Missouri",
+    "homeExemptions": {
+      "primary": true,
+      "conditions": [
+        "intent to return if institutionalized",
+        "spouse resides",
+        "minor child resides",
+        "blind or disabled child resides"
+      ],
+      "postDeathTreatment": "subject to recovery from probate and expanded estate assets if no protected heirs remain",
+      "exceptions": ["hardship waiver available"],
+      "strength": "moderate"
+    },
+    "recoveryScope": {
+      "aggressiveness": "moderate",
+      "optionalRecovery": true,
+      "tefraLiens": false,
+      "expandedEstate": true,
+      "nonProbateTransfersPursued": true
+    },
+    "recoveryTimeframes": {
+      "lookBackYears": 5,
+      "claimDeadlineAfterDeathMonths": 12,
+      "statuteLimit": "1 year from date of death"
+    },
+    "assetProtections": {
+      "homeEquityLimit": null,
+      "recoveryThresholdDollar": null,
+      "protectedAssets": [],
+      "minimumEstateForRecovery": null
+    },
+    "recoveryWaivers": {
+      "hardshipAvailable": true,
+      "criteria": [
+        "eviction or homelessness",
+        "caregiver status of heir",
+        "financial dependency on asset",
+        "significant economic hardship"
+      ],
+      "exemptHeirs": [
+        "surviving spouse",
+        "child under 21",
+        "blind or disabled child"
+      ],
+      "ageExemptions": false
+    },
+    "incomeTrustPolicies": {
+      "requiresQIT": false,
+      "spendDownType": "medically needy",
+      "incomeDisregards": [
+        "qualified medical expenses used to reduce countable income"
+      ]
+    },
+    "spousalProtections": {
+      "csra": 148620,
+      "mmna": 3715,
+      "jointPropertyTreatment": "may be subject to recovery through expanded estate recovery",
+      "additionalProtections": ["deferred recovery until after surviving spouse’s death"]
+    },
+    "administrative": {
+      "agency": "Missouri Department of Social Services (DSS), MO HealthNet Division",
+      "appealAvailable": true,
+      "settlementAllowed": true,
+      "costBenefitEvaluation": true
+    },
+    "programEffectiveness": {
+      "annualRecovery": 15000000,
+      "percentMedicaidBudget": 0.0008,
+      "estatesPursued": "probate and non-probate estates including joint accounts, revocable trusts, life estates",
+      "avgRecoveryPerEstate": null
+    },
+    "legalEnvironment": {
+      "recentCases": [],
+      "legislationChanges": [],
+      "pendingChanges": false,
+      "regionalVariation": false
+    },
+    "strategicConsiderations": {
+      "effectiveStrategies": [
+        "establish irrevocable trusts to remove assets from countable and recoverable estate",
+        "avoid sole ownership or revocable trust structures for high-value assets",
+        "apply for hardship waivers with proper documentation",
+        "use spend-down options for income excess"
+      ],
+      "relevantPrecedents": [],
+      "usefulInstruments": [
+        "MAPT",
+        "revocable trust (with caution)",
+        "hardship waiver request",
+        "joint account structuring"
+      ]
+    }
+  }
+  

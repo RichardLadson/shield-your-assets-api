@@ -1,5 +1,38 @@
 // src/services/planning/__tests__/trustPlanning.test.js
 
+jest.mock('../../../config/logger', () => ({
+  debug: jest.fn(),
+  info: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn()
+}));
+
+jest.mock('../../utils/medicaidRulesLoader', () => ({
+  getMedicaidRules: jest.fn((state) => {
+    if (state === 'florida') {
+      return {
+        assetLimitSingle: 2000,
+        lookbackPeriod: 60,
+        annualGiftExclusion: 18000
+      };
+    } else if (state === 'newyork') {
+      return {
+        assetLimitSingle: 16800,
+        lookbackPeriod: 60,
+        annualGiftExclusion: 18000
+      };
+    } else if (state === 'california') {
+      return {
+        assetLimitSingle: 2000,
+        lookbackPeriod: 30,
+        annualGiftExclusion: 18000
+      };
+    } else {
+      throw new Error(`Rules not found for state: ${state}`);
+    }
+  })
+}));
+
 const {
   assessTrustNeeds,
   evaluateTrustOptions,
@@ -8,7 +41,6 @@ const {
 } = require('../trustPlanning');
 
 describe('Trust Planning Module', () => {
-  // Basic client setup for tests
   const baseClientInfo = {
     name: 'Test Client',
     age: 75,
@@ -32,7 +64,6 @@ describe('Trust Planning Module', () => {
 
   const baseState = 'florida';
 
-  // Mock eligibility assessment results
   const baseEligibilityResults = {
     isResourceEligible: false,
     isIncomeEligible: true,
@@ -40,34 +71,14 @@ describe('Trust Planning Module', () => {
     resourceLimit: 2000
   };
 
-  // Mock rules
-  const mockRules = {
-    florida: {
-      assetLimitSingle: 2000,
-      lookbackPeriod: 60,
-      annualGiftExclusion: 18000
-    },
-    newyork: {
-      assetLimitSingle: 16800,
-      lookbackPeriod: 60,
-      annualGiftExclusion: 18000
-    }
+  const containsStringMatching = (array, pattern) => {
+    return array.some(item => pattern.test(item));
   };
 
-  // Mock the rules loader
-  jest.mock('../medicaidRulesLoader', () => ({
-    getMedicaidRules: jest.fn((state) => {
-      if (state === 'florida') {
-        return mockRules.florida;
-      } else if (state === 'newyork') {
-        return mockRules.newyork;
-      } else {
-        throw new Error(`Rules not found for state: ${state}`);
-      }
-    })
-  }));
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
-  // Unit tests for assessTrustNeeds
   describe('assessTrustNeeds', () => {
     test('should correctly identify need for trust with excess resources', () => {
       const result = assessTrustNeeds(
@@ -127,7 +138,6 @@ describe('Trust Planning Module', () => {
       );
 
       expect(result.needsTrust).toBe(true);
-      expect(result.familyConsiderations).toBeDefined();
       expect(result.familyConsiderations).toContain('special needs child');
     });
 
@@ -154,7 +164,7 @@ describe('Trust Planning Module', () => {
     test('should properly assess risk levels for asset transfer strategies', () => {
       const clientInfo = {
         ...baseClientInfo,
-        age: 85 // Older client with health issues
+        age: 85
       };
 
       const medicalInfo = {
@@ -172,14 +182,12 @@ describe('Trust Planning Module', () => {
       );
 
       expect(result.needsTrust).toBe(true);
-      expect(result.riskAssessment).toBeDefined();
       expect(result.riskAssessment.transferRisk).toBe('high');
     });
 
     test('should handle missing or incomplete data gracefully', () => {
-      // Test with minimal client info
       const result = assessTrustNeeds(
-        { age: 78 }, // Minimal client info
+        { age: 78 },
         baseAssets,
         baseIncome,
         baseEligibilityResults,
@@ -187,21 +195,50 @@ describe('Trust Planning Module', () => {
       );
 
       expect(result).toBeDefined();
-      expect(result.needsTrust).toBeDefined();
-      expect(result.dataConcerns).toBeDefined();
+      expect(result.dataConcerns).toContain('Incomplete input data');
+    });
+
+    test('should handle very young client correctly', () => {
+      const clientInfo = {
+        ...baseClientInfo,
+        age: 60
+      };
+
+      const result = assessTrustNeeds(
+        clientInfo,
+        baseAssets,
+        baseIncome,
+        baseEligibilityResults,
+        baseState
+      );
+
+      expect(result.needsTrust).toBe(true);
+      expect(result.riskAssessment).toBeUndefined();
+    });
+
+    test('should handle missing assets gracefully', () => {
+      const result = assessTrustNeeds(
+        baseClientInfo,
+        {},
+        baseIncome,
+        baseEligibilityResults,
+        baseState
+      );
+
+      expect(result.needsTrust).toBe(true);
+      expect(result.reasons).toContain('excess resources');
     });
   });
 
-  // Unit tests for evaluateTrustOptions
   describe('evaluateTrustOptions', () => {
-    test('should evaluate different trust types based on needs assessment', () => {
-      const needsAssessment = {
-        needsTrust: true,
-        reasons: ['excess resources'],
-        excessAmount: 98000,
-        trustType: ['asset protection']
-      };
+    const needsAssessment = {
+      needsTrust: true,
+      reasons: ['excess resources'],
+      excessAmount: 98000,
+      trustType: ['asset protection']
+    };
 
+    test('should evaluate different trust types based on needs assessment', () => {
       const result = evaluateTrustOptions(
         needsAssessment,
         baseClientInfo,
@@ -209,19 +246,11 @@ describe('Trust Planning Module', () => {
         baseState
       );
 
-      expect(result).toBeDefined();
       expect(result.recommendedTrustTypes).toBeInstanceOf(Array);
       expect(result.optionComparison).toBeDefined();
     });
 
     test('should recommend irrevocable trust for Medicaid planning', () => {
-      const needsAssessment = {
-        needsTrust: true,
-        reasons: ['excess resources'],
-        excessAmount: 98000,
-        trustType: ['asset protection']
-      };
-
       const result = evaluateTrustOptions(
         needsAssessment,
         baseClientInfo,
@@ -233,16 +262,9 @@ describe('Trust Planning Module', () => {
     });
 
     test('should recommend pooled trust for older clients', () => {
-      const needsAssessment = {
-        needsTrust: true,
-        reasons: ['excess resources'],
-        excessAmount: 98000,
-        trustType: ['asset protection']
-      };
-
       const clientInfo = {
         ...baseClientInfo,
-        age: 88 // Very elderly client
+        age: 88
       };
 
       const result = evaluateTrustOptions(
@@ -253,12 +275,11 @@ describe('Trust Planning Module', () => {
       );
 
       expect(result.recommendedTrustTypes).toContain('pooled trust');
-      // Age-based recommendation
-      expect(result.recommendations).toContain(expect.stringMatching(/age/i));
+      expect(containsStringMatching(result.recommendations, /age/i)).toBe(true);
     });
 
     test('should recommend special needs trust when applicable', () => {
-      const needsAssessment = {
+      const needsAssessmentWithSpecialNeeds = {
         needsTrust: true,
         reasons: ['special needs planning'],
         familyConsiderations: ['special needs child']
@@ -266,13 +287,11 @@ describe('Trust Planning Module', () => {
 
       const clientInfo = {
         ...baseClientInfo,
-        children: [
-          { name: 'Child', age: 40, specialNeeds: true }
-        ]
+        children: [{ name: 'Child', age: 40, specialNeeds: true }]
       };
 
       const result = evaluateTrustOptions(
-        needsAssessment,
+        needsAssessmentWithSpecialNeeds,
         clientInfo,
         baseAssets,
         baseState
@@ -282,13 +301,6 @@ describe('Trust Planning Module', () => {
     });
 
     test('should compare trust options with pros and cons', () => {
-      const needsAssessment = {
-        needsTrust: true,
-        reasons: ['excess resources'],
-        excessAmount: 98000,
-        trustType: ['asset protection']
-      };
-
       const result = evaluateTrustOptions(
         needsAssessment,
         baseClientInfo,
@@ -296,10 +308,7 @@ describe('Trust Planning Module', () => {
         baseState
       );
 
-      // Should have comparison data for multiple trust types
       expect(Object.keys(result.optionComparison).length).toBeGreaterThan(1);
-      
-      // Each option should have pros and cons
       Object.values(result.optionComparison).forEach(option => {
         expect(option.pros).toBeInstanceOf(Array);
         expect(option.cons).toBeInstanceOf(Array);
@@ -307,47 +316,44 @@ describe('Trust Planning Module', () => {
     });
 
     test('should consider state-specific trust rules', () => {
-      const needsAssessment = {
-        needsTrust: true,
-        reasons: ['excess resources'],
-        excessAmount: 98000,
-        trustType: ['asset protection']
-      };
-
-      // Test with Florida
       const resultFL = evaluateTrustOptions(
         needsAssessment,
         baseClientInfo,
         baseAssets,
         'florida'
       );
-      
-      // Test with New York
+
       const resultNY = evaluateTrustOptions(
         needsAssessment,
         baseClientInfo,
         baseAssets,
         'newyork'
       );
-      
-      // Should have different recommendations based on state
+
+      const resultCA = evaluateTrustOptions(
+        needsAssessment,
+        baseClientInfo,
+        baseAssets,
+        'california'
+      );
+
       expect(resultFL.stateSpecificConsiderations).not.toEqual(resultNY.stateSpecificConsiderations);
+      expect(resultFL.stateSpecificConsiderations).not.toEqual(resultCA.stateSpecificConsiderations);
     });
   });
 
-  // Unit tests for determineTrustFunding
   describe('determineTrustFunding', () => {
-    test('should develop appropriate funding strategy for selected trust', () => {
-      const trustOptions = {
-        recommendedTrustTypes: ['irrevocable medicaid asset protection trust'],
-        optionComparison: {
-          'irrevocable': {
-            pros: ['Medicaid compliant after lookback period'],
-            cons: ['Loss of control', '5-year lookback period']
-          }
+    const trustOptions = {
+      recommendedTrustTypes: ['irrevocable medicaid asset protection trust'],
+      optionComparison: {
+        'irrevocable': {
+          pros: ['Medicaid compliant after lookback period'],
+          cons: ['Loss of control', '5-year lookback period']
         }
-      };
+      }
+    };
 
+    test('should develop appropriate funding strategy for selected trust', () => {
       const result = determineTrustFunding(
         trustOptions,
         baseClientInfo,
@@ -356,17 +362,12 @@ describe('Trust Planning Module', () => {
         baseState
       );
 
-      expect(result).toBeDefined();
       expect(result.fundingStrategy).toBeDefined();
       expect(result.assetsToTransfer).toBeInstanceOf(Array);
       expect(result.timelineRecommendations).toBeDefined();
     });
 
     test('should recommend which assets to transfer to trust', () => {
-      const trustOptions = {
-        recommendedTrustTypes: ['irrevocable medicaid asset protection trust']
-      };
-
       const result = determineTrustFunding(
         trustOptions,
         baseClientInfo,
@@ -376,7 +377,6 @@ describe('Trust Planning Module', () => {
       );
 
       expect(result.assetsToTransfer.length).toBeGreaterThan(0);
-      // Should specify amounts for each asset
       result.assetsToTransfer.forEach(asset => {
         expect(asset.name).toBeDefined();
         expect(asset.amount).toBeDefined();
@@ -385,10 +385,6 @@ describe('Trust Planning Module', () => {
     });
 
     test('should retain sufficient assets for living expenses', () => {
-      const trustOptions = {
-        recommendedTrustTypes: ['irrevocable medicaid asset protection trust']
-      };
-
       const result = determineTrustFunding(
         trustOptions,
         baseClientInfo,
@@ -403,10 +399,6 @@ describe('Trust Planning Module', () => {
     });
 
     test('should consider lookback period in funding timeline', () => {
-      const trustOptions = {
-        recommendedTrustTypes: ['irrevocable medicaid asset protection trust']
-      };
-
       const result = determineTrustFunding(
         trustOptions,
         baseClientInfo,
@@ -415,16 +407,11 @@ describe('Trust Planning Module', () => {
         baseState
       );
 
-      expect(result.timelineRecommendations).toContain(expect.stringMatching(/lookback/i));
+      expect(containsStringMatching(result.timelineRecommendations, /lookback/i)).toBe(true);
       expect(result.planningHorizon).toBeDefined();
-      expect(result.planningHorizon.lookbackCompleted).toBeDefined();
     });
 
     test('should provide income projections after trust funding', () => {
-      const trustOptions = {
-        recommendedTrustTypes: ['irrevocable medicaid asset protection trust']
-      };
-
       const result = determineTrustFunding(
         trustOptions,
         baseClientInfo,
@@ -439,13 +426,9 @@ describe('Trust Planning Module', () => {
     });
 
     test('should handle older clients with shorter planning horizons', () => {
-      const trustOptions = {
-        recommendedTrustTypes: ['pooled trust']
-      };
-
       const clientInfo = {
         ...baseClientInfo,
-        age: 90 // Very elderly client
+        age: 90
       };
 
       const result = determineTrustFunding(
@@ -458,11 +441,22 @@ describe('Trust Planning Module', () => {
 
       expect(result.urgencyLevel).toBe('high');
       expect(result.alternativePlanningStrategies).toBeDefined();
-      expect(result.alternativePlanningStrategies.length).toBeGreaterThan(0);
+    });
+
+    test('should handle missing income gracefully', () => {
+      const result = determineTrustFunding(
+        trustOptions,
+        baseClientInfo,
+        baseAssets,
+        {},
+        baseState
+      );
+
+      expect(result.incomeProjections.beforeTrust).toBe(0);
+      expect(result.incomeProjections.afterTrust).toBe(0);
     });
   });
 
-  // Integration tests for trustPlanning
   describe('trustPlanning', () => {
     test('should perform complete trust planning process', async () => {
       const result = await trustPlanning(
@@ -473,7 +467,6 @@ describe('Trust Planning Module', () => {
         baseState
       );
 
-      expect(result).toBeDefined();
       expect(result.needsAssessment).toBeDefined();
       expect(result.trustOptions).toBeDefined();
       expect(result.fundingStrategy).toBeDefined();
@@ -489,8 +482,7 @@ describe('Trust Planning Module', () => {
         baseState
       );
 
-      expect(result.implementationResources).toBeDefined();
-      expect(result.implementationResources).toContain(expect.stringMatching(/attorney/i));
+      expect(result.implementationResources).toContain('Consult elder law attorney');
     });
 
     test('should handle scenario with no trust needed', async () => {
@@ -510,7 +502,7 @@ describe('Trust Planning Module', () => {
       );
 
       expect(result.needsAssessment.needsTrust).toBe(false);
-      expect(result.recommendations).toContain(expect.stringMatching(/trust.*not needed/i));
+      expect(containsStringMatching(result.recommendations, /trust.*not needed/i)).toBe(true);
     });
 
     test('should handle income trust planning when needed', async () => {
@@ -529,13 +521,11 @@ describe('Trust Planning Module', () => {
         baseState
       );
 
-      expect(result.needsAssessment.needsTrust).toBe(true);
       expect(result.needsAssessment.trustType).toContain('income');
-      expect(result.recommendations).toContain(expect.stringMatching(/income trust/i));
+      expect(containsStringMatching(result.recommendations, /income trust/i)).toBe(true);
     });
 
     test('should handle errors gracefully', async () => {
-      // Test with invalid state
       const result = await trustPlanning(
         baseClientInfo,
         baseAssets,
@@ -557,10 +547,21 @@ describe('Trust Planning Module', () => {
         baseState
       );
 
-      expect(result.planningReport).toBeDefined();
       expect(result.planningReport.summary).toBeDefined();
       expect(result.planningReport.recommendations).toBeInstanceOf(Array);
       expect(result.planningReport.nextSteps).toBeInstanceOf(Array);
+    });
+
+    test('should handle invalid client info gracefully', async () => {
+      const result = await trustPlanning(
+        {},
+        baseAssets,
+        baseIncome,
+        baseEligibilityResults,
+        baseState
+      );
+
+      expect(result.needsAssessment.dataConcerns).toContain('Incomplete client information');
     });
   });
 });

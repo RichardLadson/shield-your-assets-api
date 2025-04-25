@@ -1,0 +1,93 @@
+{
+    "state": "Maryland",
+    "homeExemptions": {
+      "primary": true,
+      "conditions": [
+        "spouse resides",
+        "minor child resides",
+        "blind or disabled child resides",
+        "intent to return if institutionalized"
+      ],
+      "postDeathTreatment": "subject to recovery only if property passes through probate",
+      "exceptions": ["hardship waiver process available"],
+      "strength": "strong"
+    },
+    "recoveryScope": {
+      "aggressiveness": "limited",
+      "optionalRecovery": false,
+      "tefraLiens": false,
+      "expandedEstate": false,
+      "nonProbateTransfersPursued": false
+    },
+    "recoveryTimeframes": {
+      "lookBackYears": 5,
+      "claimDeadlineAfterDeathMonths": 6,
+      "statuteLimit": "6 months from death or probate notification"
+    },
+    "assetProtections": {
+      "homeEquityLimit": null,
+      "recoveryThresholdDollar": null,
+      "protectedAssets": [],
+      "minimumEstateForRecovery": null
+    },
+    "recoveryWaivers": {
+      "hardshipAvailable": true,
+      "criteria": [
+        "heir would lose housing",
+        "heir would lose sole income source",
+        "heir would fall into poverty or require public assistance"
+      ],
+      "exemptHeirs": [
+        "surviving spouse",
+        "child under 21",
+        "blind or disabled child"
+      ],
+      "ageExemptions": false
+    },
+    "incomeTrustPolicies": {
+      "requiresQIT": false,
+      "spendDownType": "medically needy",
+      "incomeDisregards": ["medical expenses may be used to reduce countable income"]
+    },
+    "spousalProtections": {
+      "csra": 148620,
+      "mmna": 3715,
+      "jointPropertyTreatment": "not subject to recovery while spouse is alive",
+      "additionalProtections": ["no recovery from estate of surviving spouse"]
+    },
+    "administrative": {
+      "agency": "Maryland Department of Health – Estate Recovery Unit",
+      "appealAvailable": true,
+      "settlementAllowed": true,
+      "costBenefitEvaluation": true
+    },
+    "programEffectiveness": {
+      "annualRecovery": 8000000,
+      "percentMedicaidBudget": 0.0006,
+      "estatesPursued": "probate estates with real property or liquid assets",
+      "avgRecoveryPerEstate": null
+    },
+    "legalEnvironment": {
+      "recentCases": [],
+      "legislationChanges": [],
+      "pendingChanges": false,
+      "regionalVariation": false
+    },
+    "strategicConsiderations": {
+      "effectiveStrategies": [
+        "use revocable trusts, TOD deeds, and beneficiary designations to avoid probate",
+        "apply spend-down planning for income eligibility",
+        "submit hardship waiver with documentation when applicable",
+        "structure joint assets to pass outside probate"
+      ],
+      "relevantPrecedents": [],
+      "usefulInstruments": [
+        "revocable living trust",
+        "TOD deed",
+        "beneficiary designation",
+        "spend-down documentation",
+        "hardship waiver application"
+      ]
+    }
+  }
+  

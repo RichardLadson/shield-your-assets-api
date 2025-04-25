@@ -238,7 +238,20 @@ async function assetPlanning(clientInfo, assets, state) {
   }
 }
 
-// Export both function names for compatibility
+/**
+ * Additional function for assessing assets
+ * 
+ * @param {string} state - State abbreviation
+ * @param {string} maritalStatus - Client's marital status
+ * @returns {Promise<Object>} Asset assessment
+ */
+async function assessAssets(state, maritalStatus) {
+  const rules = await medicaidRulesLoader.loadMedicaidRules(state);
+  // Implementation would go here
+  return rules;
+}
+
+// Export all functions
 module.exports = {
   assetPlanning,
   assessAssetSituation,
@@ -246,8 +259,5 @@ module.exports = {
   determineAssetStrategies,
   planAssetApproach,
   medicaidAssetPlanning: assetPlanning,
-};const medicaidRulesLoader = require('../utils/medicaidRulesLoader');
-async function assessAssets(state, maritalStatus) {
-  const rules = await medicaidRulesLoader.loadMedicaidRules(state);
-  // ... rest of logic
-}
+  assessAssets
+};

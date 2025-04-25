@@ -1,0 +1,93 @@
+{
+    "state": "Utah",
+    "homeExemptions": {
+      "primary": true,
+      "conditions": [
+        "intent to return if institutionalized",
+        "spouse resides",
+        "minor child resides",
+        "blind or disabled child resides"
+      ],
+      "postDeathTreatment": "subject to recovery only if part of probate estate and no protected heirs remain",
+      "exceptions": ["hardship waiver may apply"],
+      "strength": "strong"
+    },
+    "recoveryScope": {
+      "aggressiveness": "limited",
+      "optionalRecovery": false,
+      "tefraLiens": true,
+      "expandedEstate": false,
+      "nonProbateTransfersPursued": false
+    },
+    "recoveryTimeframes": {
+      "lookBackYears": 5,
+      "claimDeadlineAfterDeathMonths": 4,
+      "statuteLimit": "4 months from estate notice or personal representative appointment"
+    },
+    "assetProtections": {
+      "homeEquityLimit": null,
+      "recoveryThresholdDollar": null,
+      "protectedAssets": [],
+      "minimumEstateForRecovery": null
+    },
+    "recoveryWaivers": {
+      "hardshipAvailable": true,
+      "criteria": [
+        "eviction or homelessness",
+        "loss of housing or basic support",
+        "significant financial hardship"
+      ],
+      "exemptHeirs": [
+        "surviving spouse",
+        "child under 21",
+        "blind or disabled child"
+      ],
+      "ageExemptions": false
+    },
+    "incomeTrustPolicies": {
+      "requiresQIT": true,
+      "spendDownType": "none (income-cap state)",
+      "incomeDisregards": []
+    },
+    "spousalProtections": {
+      "csra": 148620,
+      "mmna": 3715,
+      "jointPropertyTreatment": "not subject to recovery if it avoids probate",
+      "additionalProtections": ["no recovery from estate of surviving spouse"]
+    },
+    "administrative": {
+      "agency": "Utah Department of Health and Human Services (UDHHS)",
+      "appealAvailable": true,
+      "settlementAllowed": true,
+      "costBenefitEvaluation": true
+    },
+    "programEffectiveness": {
+      "annualRecovery": 6000000,
+      "percentMedicaidBudget": 0.0004,
+      "estatesPursued": "probate estates with real estate or liquid assets",
+      "avgRecoveryPerEstate": null
+    },
+    "legalEnvironment": {
+      "recentCases": [],
+      "legislationChanges": [],
+      "pendingChanges": false,
+      "regionalVariation": false
+    },
+    "strategicConsiderations": {
+      "effectiveStrategies": [
+        "avoid probate using revocable living trusts, TOD deeds, and beneficiary designations",
+        "establish QIT for income-cap eligibility",
+        "submit hardship waiver documentation early if heirs qualify",
+        "structure ownership to pass outside of probate"
+      ],
+      "relevantPrecedents": [],
+      "usefulInstruments": [
+        "QIT",
+        "revocable living trust",
+        "TOD deed",
+        "joint tenancy",
+        "hardship waiver application"
+      ]
+    }
+  }
+  

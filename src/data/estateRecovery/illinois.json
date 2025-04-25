@@ -1,0 +1,94 @@
+{
+    "state": "Illinois",
+    "homeExemptions": {
+      "primary": true,
+      "conditions": [
+        "spouse resides",
+        "minor child resides",
+        "blind or disabled child resides",
+        "intent to return if institutionalized"
+      ],
+      "postDeathTreatment": "subject to recovery only if home passes through probate",
+      "exceptions": ["hardship waiver may apply"],
+      "strength": "strong"
+    },
+    "recoveryScope": {
+      "aggressiveness": "limited",
+      "optionalRecovery": false,
+      "tefraLiens": false,
+      "expandedEstate": false,
+      "nonProbateTransfersPursued": false
+    },
+    "recoveryTimeframes": {
+      "lookBackYears": 5,
+      "claimDeadlineAfterDeathMonths": 6,
+      "statuteLimit": "6 months after death or probate notice"
+    },
+    "assetProtections": {
+      "homeEquityLimit": null,
+      "recoveryThresholdDollar": 25000,
+      "protectedAssets": [],
+      "minimumEstateForRecovery": 25000
+    },
+    "recoveryWaivers": {
+      "hardshipAvailable": true,
+      "criteria": [
+        "recovery would render heir homeless",
+        "recovery would eliminate primary income source",
+        "significant financial hardship"
+      ],
+      "exemptHeirs": [
+        "surviving spouse",
+        "child under 21",
+        "blind or disabled child"
+      ],
+      "ageExemptions": false
+    },
+    "incomeTrustPolicies": {
+      "requiresQIT": false,
+      "spendDownType": "medically needy",
+      "incomeDisregards": [
+        "incurred medical expenses may be used for spend-down eligibility"
+      ]
+    },
+    "spousalProtections": {
+      "csra": 148620,
+      "mmna": 3715,
+      "jointPropertyTreatment": "not subject to recovery while spouse is alive or if it avoids probate",
+      "additionalProtections": ["no recovery from surviving spouse's estate"]
+    },
+    "administrative": {
+      "agency": "Illinois Department of Healthcare and Family Services (HFS), Estate Recovery Unit",
+      "appealAvailable": true,
+      "settlementAllowed": true,
+      "costBenefitEvaluation": true
+    },
+    "programEffectiveness": {
+      "annualRecovery": 9000000,
+      "percentMedicaidBudget": 0.0005,
+      "estatesPursued": "probate estates with real property or liquid assets",
+      "avgRecoveryPerEstate": null
+    },
+    "legalEnvironment": {
+      "recentCases": [],
+      "legislationChanges": [],
+      "pendingChanges": false,
+      "regionalVariation": false
+    },
+    "strategicConsiderations": {
+      "effectiveStrategies": [
+        "avoid probate using revocable trusts, TOD deeds, or joint ownership",
+        "use beneficiary designations for financial accounts",
+        "use hardship waiver if heir would lose housing or income",
+        "leverage spend-down if over income threshold"
+      ],
+      "relevantPrecedents": [],
+      "usefulInstruments": [
+        "revocable living trust",
+        "TOD deed",
+        "beneficiary designation",
+        "hardship waiver application"
+      ]
+    }
+  }
+  

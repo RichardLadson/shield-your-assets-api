@@ -1,0 +1,92 @@
+{
+    "state": "Idaho",
+    "homeExemptions": {
+      "primary": true,
+      "conditions": [
+        "spouse resides",
+        "minor child resides",
+        "blind or disabled child resides",
+        "intent to return if institutionalized"
+      ],
+      "postDeathTreatment": "subject to recovery through probate or expanded estate if no protected heirs remain",
+      "exceptions": ["hardship waiver application process"],
+      "strength": "moderate"
+    },
+    "recoveryScope": {
+      "aggressiveness": "aggressive",
+      "optionalRecovery": true,
+      "tefraLiens": true,
+      "expandedEstate": true,
+      "nonProbateTransfersPursued": true
+    },
+    "recoveryTimeframes": {
+      "lookBackYears": 5,
+      "claimDeadlineAfterDeathMonths": 4,
+      "statuteLimit": "4 months after probate notice"
+    },
+    "assetProtections": {
+      "homeEquityLimit": null,
+      "recoveryThresholdDollar": null,
+      "protectedAssets": [],
+      "minimumEstateForRecovery": null
+    },
+    "recoveryWaivers": {
+      "hardshipAvailable": true,
+      "criteria": [
+        "heir would lose primary residence",
+        "property is sole source of income",
+        "significant financial hardship"
+      ],
+      "exemptHeirs": [
+        "surviving spouse",
+        "child under 21",
+        "blind or disabled child"
+      ],
+      "ageExemptions": false
+    },
+    "incomeTrustPolicies": {
+      "requiresQIT": true,
+      "spendDownType": "none (income-cap state)",
+      "incomeDisregards": []
+    },
+    "spousalProtections": {
+      "csra": 148620,
+      "mmna": 3715,
+      "jointPropertyTreatment": "may be subject to recovery under expanded estate",
+      "additionalProtections": []
+    },
+    "administrative": {
+      "agency": "Idaho Department of Health and Welfare",
+      "appealAvailable": true,
+      "settlementAllowed": true,
+      "costBenefitEvaluation": true
+    },
+    "programEffectiveness": {
+      "annualRecovery": 3000000,
+      "percentMedicaidBudget": 0.0007,
+      "estatesPursued": "probate and non-probate including joint accounts, life estates, revocable trusts",
+      "avgRecoveryPerEstate": null
+    },
+    "legalEnvironment": {
+      "recentCases": [],
+      "legislationChanges": [],
+      "pendingChanges": false,
+      "regionalVariation": false
+    },
+    "strategicConsiderations": {
+      "effectiveStrategies": [
+        "use irrevocable Medicaid Asset Protection Trust (MAPT) outside the 5-year look-back",
+        "avoid revocable trusts and joint ownership as recovery applies to expanded estate",
+        "file hardship waiver promptly with detailed documentation",
+        "ensure QIT setup for over-income applicants"
+      ],
+      "relevantPrecedents": [],
+      "usefulInstruments": [
+        "MAPT",
+        "QIT",
+        "hardship waiver process",
+        "asset retitling to avoid expanded recovery"
+      ]
+    }
+  }
+  

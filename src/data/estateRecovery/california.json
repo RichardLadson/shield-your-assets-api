@@ -1,0 +1,99 @@
+{
+    "state": "California",
+    "homeExemptions": {
+      "primary": true,
+      "conditions": [
+        "spouse resides",
+        "minor child resides",
+        "blind or disabled child resides"
+      ],
+      "postDeathTreatment": "not subject to recovery if home avoids probate (e.g., TOD deed, trust, joint tenancy)",
+      "exceptions": ["caregiver child exemption", "hardship waivers"],
+      "strength": "strong"
+    },
+    "recoveryScope": {
+      "aggressiveness": "limited",
+      "optionalRecovery": false,
+      "tefraLiens": false,
+      "expandedEstate": false,
+      "nonProbateTransfersPursued": false
+    },
+    "recoveryTimeframes": {
+      "lookBackYears": 5,
+      "claimDeadlineAfterDeathMonths": 4,
+      "statuteLimit": "4 months after probate begins"
+    },
+    "assetProtections": {
+      "homeEquityLimit": null,
+      "recoveryThresholdDollar": 15000,
+      "protectedAssets": [
+        "joint tenancy property",
+        "life insurance with named beneficiary",
+        "IRAs with designated beneficiaries"
+      ],
+      "minimumEstateForRecovery": 15000
+    },
+    "recoveryWaivers": {
+      "hardshipAvailable": true,
+      "criteria": [
+        "heir would qualify for public assistance if recovery enforced",
+        "heir would lose shelter",
+        "heir inherits income-producing property (e.g., working farm)",
+        "home is modest in value"
+      ],
+      "exemptHeirs": [
+        "surviving spouse",
+        "child under 21",
+        "blind or disabled child"
+      ],
+      "ageExemptions": false
+    },
+    "incomeTrustPolicies": {
+      "requiresQIT": false,
+      "spendDownType": "medically needy",
+      "incomeDisregards": [
+        "medical expenses allowed as deduction",
+        "no income cap for eligibility"
+      ]
+    },
+    "spousalProtections": {
+      "csra": 148620,
+      "mmna": 3715,
+      "jointPropertyTreatment": "joint property passes without probate, not subject to recovery",
+      "additionalProtections": ["registered domestic partners treated as spouses"]
+    },
+    "administrative": {
+      "agency": "California Department of Health Care Services (DHCS)",
+      "appealAvailable": true,
+      "settlementAllowed": true,
+      "costBenefitEvaluation": true
+    },
+    "programEffectiveness": {
+      "annualRecovery": 15000000,
+      "percentMedicaidBudget": 0.0003,
+      "estatesPursued": "probate estates with LTC services over age 55",
+      "avgRecoveryPerEstate": null
+    },
+    "legalEnvironment": {
+      "recentCases": [],
+      "legislationChanges": ["SB 833 (2016) significantly limited recovery scope"],
+      "pendingChanges": false,
+      "regionalVariation": false
+    },
+    "strategicConsiderations": {
+      "effectiveStrategies": [
+        "avoid probate using TOD deeds or revocable trusts",
+        "use beneficiary designations for financial accounts",
+        "apply for hardship waiver when applicable",
+        "ensure timely filing of Notice of Death with DHCS"
+      ],
+      "relevantPrecedents": ["SB 833 reform"],
+      "usefulInstruments": [
+        "revocable living trust",
+        "TOD deed",
+        "joint tenancy title",
+        "life insurance with beneficiary"
+      ]
+    }
+  }
+  

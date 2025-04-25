@@ -1,0 +1,92 @@
+{
+    "state": "Arizona",
+    "homeExemptions": {
+      "primary": true,
+      "conditions": [
+        "spouse resides",
+        "minor child resides",
+        "blind or disabled child resides",
+        "intent to return if institutionalized"
+      ],
+      "postDeathTreatment": "subject to recovery only if home passes through probate and no protected heirs reside",
+      "exceptions": ["hardship waiver available", "Native American land exemption"],
+      "strength": "moderate"
+    },
+    "recoveryScope": {
+      "aggressiveness": "moderate",
+      "optionalRecovery": false,
+      "tefraLiens": true,
+      "expandedEstate": false,
+      "nonProbateTransfersPursued": false
+    },
+    "recoveryTimeframes": {
+      "lookBackYears": 5,
+      "claimDeadlineAfterDeathMonths": 4,
+      "statuteLimit": "4 months after notice to creditors"
+    },
+    "assetProtections": {
+      "homeEquityLimit": 713000,
+      "recoveryThresholdDollar": null,
+      "protectedAssets": ["tribal land", "tribal income"],
+      "minimumEstateForRecovery": null
+    },
+    "recoveryWaivers": {
+      "hardshipAvailable": true,
+      "criteria": [
+        "heir would qualify for public assistance if recovery is enforced",
+        "heir would lose housing",
+        "property is sole source of income"
+      ],
+      "exemptHeirs": [
+        "surviving spouse",
+        "child under 21",
+        "blind or disabled child"
+      ],
+      "ageExemptions": false
+    },
+    "incomeTrustPolicies": {
+      "requiresQIT": true,
+      "spendDownType": "none (income-cap state)",
+      "incomeDisregards": []
+    },
+    "spousalProtections": {
+      "csra": 148620,
+      "mmna": 3715,
+      "jointPropertyTreatment": "not subject to recovery while spouse is alive",
+      "additionalProtections": []
+    },
+    "administrative": {
+      "agency": "Arizona Health Care Cost Containment System (AHCCCS)",
+      "appealAvailable": true,
+      "settlementAllowed": true,
+      "costBenefitEvaluation": true
+    },
+    "programEffectiveness": {
+      "annualRecovery": 5000000,
+      "percentMedicaidBudget": 0.001,
+      "estatesPursued": "limited to probate estates with substantial assets",
+      "avgRecoveryPerEstate": null
+    },
+    "legalEnvironment": {
+      "recentCases": [],
+      "legislationChanges": [],
+      "pendingChanges": false,
+      "regionalVariation": false
+    },
+    "strategicConsiderations": {
+      "effectiveStrategies": [
+        "avoid probate using TOD deeds, revocable living trusts",
+        "establish QIT if over income",
+        "file Notice of Death within 3 months",
+        "apply for hardship waiver within 30 days"
+      ],
+      "relevantPrecedents": [],
+      "usefulInstruments": [
+        "TOD deeds",
+        "QIT",
+        "revocable living trust",
+        "beneficiary designations"
+      ]
+    }
+  }
+  

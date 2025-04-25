@@ -1,0 +1,95 @@
+{
+    "state": "Montana",
+    "homeExemptions": {
+      "primary": true,
+      "conditions": [
+        "intent to return if institutionalized",
+        "spouse resides",
+        "minor child resides",
+        "blind or disabled child resides"
+      ],
+      "postDeathTreatment": "subject to recovery only if home passes through probate and no protected heirs survive",
+      "exceptions": ["hardship waiver may apply"],
+      "strength": "strong"
+    },
+    "recoveryScope": {
+      "aggressiveness": "limited",
+      "optionalRecovery": false,
+      "tefraLiens": true,
+      "expandedEstate": false,
+      "nonProbateTransfersPursued": false
+    },
+    "recoveryTimeframes": {
+      "lookBackYears": 5,
+      "claimDeadlineAfterDeathMonths": 4,
+      "statuteLimit": "4 months from notice by estate representative"
+    },
+    "assetProtections": {
+      "homeEquityLimit": null,
+      "recoveryThresholdDollar": null,
+      "protectedAssets": [],
+      "minimumEstateForRecovery": null
+    },
+    "recoveryWaivers": {
+      "hardshipAvailable": true,
+      "criteria": [
+        "eviction or homelessness",
+        "heir would lose primary source of income",
+        "significant financial hardship"
+      ],
+      "exemptHeirs": [
+        "surviving spouse",
+        "child under 21",
+        "blind or disabled child"
+      ],
+      "ageExemptions": false
+    },
+    "incomeTrustPolicies": {
+      "requiresQIT": false,
+      "spendDownType": "medically needy",
+      "incomeDisregards": [
+        "medical expenses may offset income to meet eligibility"
+      ]
+    },
+    "spousalProtections": {
+      "csra": 148620,
+      "mmna": 3715,
+      "jointPropertyTreatment": "not subject to recovery if it avoids probate",
+      "additionalProtections": ["no recovery from estate of surviving spouse"]
+    },
+    "administrative": {
+      "agency": "Montana Department of Public Health and Human Services (DPHHS)",
+      "appealAvailable": true,
+      "settlementAllowed": true,
+      "costBenefitEvaluation": true
+    },
+    "programEffectiveness": {
+      "annualRecovery": 3000000,
+      "percentMedicaidBudget": 0.0003,
+      "estatesPursued": "probate estates containing real estate or financial accounts",
+      "avgRecoveryPerEstate": null
+    },
+    "legalEnvironment": {
+      "recentCases": [],
+      "legislationChanges": [],
+      "pendingChanges": false,
+      "regionalVariation": false
+    },
+    "strategicConsiderations": {
+      "effectiveStrategies": [
+        "avoid probate using revocable trusts, joint ownership, or TOD designations",
+        "apply spend-down planning for income excess",
+        "request hardship waivers for low-income heirs",
+        "retitle property to pass outside probate where allowed"
+      ],
+      "relevantPrecedents": [],
+      "usefulInstruments": [
+        "revocable living trust",
+        "joint tenancy",
+        "TOD deed",
+        "beneficiary designation",
+        "hardship waiver request"
+      ]
+    }
+  }
+  

@@ -1,0 +1,94 @@
+{
+    "state": "Colorado",
+    "homeExemptions": {
+      "primary": true,
+      "conditions": [
+        "spouse resides",
+        "minor child resides",
+        "blind or disabled child resides",
+        "intent to return if institutionalized"
+      ],
+      "postDeathTreatment": "subject to recovery only if part of probate estate and no protected heirs remain",
+      "exceptions": ["good cause hardship waivers", "cost-benefit evaluation may exclude recovery"],
+      "strength": "moderate"
+    },
+    "recoveryScope": {
+      "aggressiveness": "limited",
+      "optionalRecovery": false,
+      "tefraLiens": true,
+      "expandedEstate": false,
+      "nonProbateTransfersPursued": false
+    },
+    "recoveryTimeframes": {
+      "lookBackYears": 5,
+      "claimDeadlineAfterDeathMonths": 4,
+      "statuteLimit": "4 months after notice to creditors"
+    },
+    "assetProtections": {
+      "homeEquityLimit": 713000,
+      "recoveryThresholdDollar": null,
+      "protectedAssets": [],
+      "minimumEstateForRecovery": null
+    },
+    "recoveryWaivers": {
+      "hardshipAvailable": true,
+      "criteria": [
+        "heir would face eviction or lack of shelter",
+        "heir relies on estate asset for income",
+        "estate is of low value and recovery is not cost-effective"
+      ],
+      "exemptHeirs": [
+        "surviving spouse",
+        "child under 21",
+        "blind or disabled child"
+      ],
+      "ageExemptions": false
+    },
+    "incomeTrustPolicies": {
+      "requiresQIT": true,
+      "spendDownType": "none (income-cap state)",
+      "incomeDisregards": []
+    },
+    "spousalProtections": {
+      "csra": 148620,
+      "mmna": 3715,
+      "jointPropertyTreatment": "not subject to recovery while spouse is alive; joint assets avoid probate",
+      "additionalProtections": []
+    },
+    "administrative": {
+      "agency": "Colorado Department of Health Care Policy and Financing (HCPF)",
+      "appealAvailable": true,
+      "settlementAllowed": true,
+      "costBenefitEvaluation": true
+    },
+    "programEffectiveness": {
+      "annualRecovery": 8000000,
+      "percentMedicaidBudget": 0.0005,
+      "estatesPursued": "probate estates with significant assets or real property",
+      "avgRecoveryPerEstate": null
+    },
+    "legalEnvironment": {
+      "recentCases": [],
+      "legislationChanges": [
+        "2017 exclusion of ACA expansion groups from recovery unless they received LTC"
+      ],
+      "pendingChanges": false,
+      "regionalVariation": false
+    },
+    "strategicConsiderations": {
+      "effectiveStrategies": [
+        "use revocable living trusts or TOD deeds to avoid probate",
+        "establish a QIT if over income limit",
+        "apply for hardship waiver or request settlement in low-value cases",
+        "avoid holding assets solely in recipient’s name to prevent probate"
+      ],
+      "relevantPrecedents": [],
+      "usefulInstruments": [
+        "QIT",
+        "revocable living trust",
+        "TOD deed",
+        "joint tenancy"
+      ]
+    }
+  }
+  

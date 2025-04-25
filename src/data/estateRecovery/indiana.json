@@ -1,0 +1,93 @@
+{
+    "state": "Indiana",
+    "homeExemptions": {
+      "primary": true,
+      "conditions": [
+        "spouse resides",
+        "minor child resides",
+        "blind or disabled child resides",
+        "intent to return if institutionalized"
+      ],
+      "postDeathTreatment": "subject to recovery only if part of probate estate",
+      "exceptions": ["hardship waiver may apply"],
+      "strength": "strong"
+    },
+    "recoveryScope": {
+      "aggressiveness": "moderate",
+      "optionalRecovery": false,
+      "tefraLiens": true,
+      "expandedEstate": false,
+      "nonProbateTransfersPursued": false
+    },
+    "recoveryTimeframes": {
+      "lookBackYears": 5,
+      "claimDeadlineAfterDeathMonths": 5,
+      "statuteLimit": "claim must be filed within 5 months of notice from estate representative"
+    },
+    "assetProtections": {
+      "homeEquityLimit": null,
+      "recoveryThresholdDollar": null,
+      "protectedAssets": [],
+      "minimumEstateForRecovery": null
+    },
+    "recoveryWaivers": {
+      "hardshipAvailable": true,
+      "criteria": [
+        "eviction or homelessness risk",
+        "loss of income-producing property",
+        "financial hardship due to caregiving or health needs"
+      ],
+      "exemptHeirs": [
+        "surviving spouse",
+        "child under 21",
+        "blind or disabled child"
+      ],
+      "ageExemptions": false
+    },
+    "incomeTrustPolicies": {
+      "requiresQIT": true,
+      "spendDownType": "none (income-cap state)",
+      "incomeDisregards": []
+    },
+    "spousalProtections": {
+      "csra": 148620,
+      "mmna": 3715,
+      "jointPropertyTreatment": "not subject to recovery while spouse is alive",
+      "additionalProtections": ["no recovery from estate of surviving spouse"]
+    },
+    "administrative": {
+      "agency": "Indiana Family and Social Services Administration (FSSA)",
+      "appealAvailable": true,
+      "settlementAllowed": true,
+      "costBenefitEvaluation": true
+    },
+    "programEffectiveness": {
+      "annualRecovery": 11000000,
+      "percentMedicaidBudget": 0.0005,
+      "estatesPursued": "probate estates with real property or significant assets",
+      "avgRecoveryPerEstate": null
+    },
+    "legalEnvironment": {
+      "recentCases": [],
+      "legislationChanges": [],
+      "pendingChanges": false,
+      "regionalVariation": false
+    },
+    "strategicConsiderations": {
+      "effectiveStrategies": [
+        "use revocable trusts and TOD deeds to avoid probate",
+        "set up QIT for over-income applicants",
+        "title assets jointly with right of survivorship when appropriate",
+        "consider hardship waiver if estate includes shared-use property"
+      ],
+      "relevantPrecedents": [],
+      "usefulInstruments": [
+        "QIT",
+        "revocable living trust",
+        "TOD deed",
+        "beneficiary designations",
+        "joint tenancy"
+      ]
+    }
+  }
+  

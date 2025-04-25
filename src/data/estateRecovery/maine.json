@@ -1,0 +1,92 @@
+{
+    "state": "Maine",
+    "homeExemptions": {
+      "primary": true,
+      "conditions": [
+        "spouse resides",
+        "minor child resides",
+        "blind or disabled child resides",
+        "intent to return if institutionalized"
+      ],
+      "postDeathTreatment": "subject to recovery if part of probate or expanded estate and no protected heirs remain",
+      "exceptions": ["hardship waiver for caregiver children or financial hardship"],
+      "strength": "moderate"
+    },
+    "recoveryScope": {
+      "aggressiveness": "aggressive",
+      "optionalRecovery": true,
+      "tefraLiens": true,
+      "expandedEstate": true,
+      "nonProbateTransfersPursued": true
+    },
+    "recoveryTimeframes": {
+      "lookBackYears": 5,
+      "claimDeadlineAfterDeathMonths": 6,
+      "statuteLimit": "6 months from notice by estate representative"
+    },
+    "assetProtections": {
+      "homeEquityLimit": null,
+      "recoveryThresholdDollar": null,
+      "protectedAssets": [],
+      "minimumEstateForRecovery": null
+    },
+    "recoveryWaivers": {
+      "hardshipAvailable": true,
+      "criteria": [
+        "heir would face eviction or homelessness",
+        "property is sole source of income",
+        "heir was a caregiver for the Medicaid recipient"
+      ],
+      "exemptHeirs": [
+        "surviving spouse",
+        "child under 21",
+        "blind or disabled child"
+      ],
+      "ageExemptions": false
+    },
+    "incomeTrustPolicies": {
+      "requiresQIT": false,
+      "spendDownType": "medically needy",
+      "incomeDisregards": ["incurred medical expenses offset excess income"]
+    },
+    "spousalProtections": {
+      "csra": 148620,
+      "mmna": 3715,
+      "jointPropertyTreatment": "may be subject to recovery under expanded estate rules",
+      "additionalProtections": ["deferred recovery until death of surviving spouse"]
+    },
+    "administrative": {
+      "agency": "Maine Department of Health and Human Services (DHHS), Office for Family Independence",
+      "appealAvailable": true,
+      "settlementAllowed": true,
+      "costBenefitEvaluation": true
+    },
+    "programEffectiveness": {
+      "annualRecovery": 7500000,
+      "percentMedicaidBudget": 0.0008,
+      "estatesPursued": "probate and non-probate estates including joint accounts, life estates, revocable trusts",
+      "avgRecoveryPerEstate": null
+    },
+    "legalEnvironment": {
+      "recentCases": [],
+      "legislationChanges": [],
+      "pendingChanges": false,
+      "regionalVariation": false
+    },
+    "strategicConsiderations": {
+      "effectiveStrategies": [
+        "use irrevocable Medicaid Asset Protection Trusts (MAPTs)",
+        "avoid use of life estates and revocable trusts for asset protection",
+        "apply for hardship waivers in cases of caregiver or low-income heirs",
+        "leverage spend-down pathway for income eligibility"
+      ],
+      "relevantPrecedents": [],
+      "usefulInstruments": [
+        "MAPT",
+        "hardship waiver application",
+        "spend-down calculation",
+        "early planning to exit expanded estate reach"
+      ]
+    }
+  }
+  

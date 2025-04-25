@@ -1,0 +1,93 @@
+{
+    "state": "Oregon",
+    "homeExemptions": {
+      "primary": true,
+      "conditions": [
+        "intent to return if institutionalized",
+        "spouse resides",
+        "minor child resides",
+        "blind or disabled child resides"
+      ],
+      "postDeathTreatment": "subject to recovery from probate and non-probate assets under expanded estate rules",
+      "exceptions": ["hardship waiver may apply"],
+      "strength": "moderate"
+    },
+    "recoveryScope": {
+      "aggressiveness": "aggressive",
+      "optionalRecovery": true,
+      "tefraLiens": true,
+      "expandedEstate": true,
+      "nonProbateTransfersPursued": true
+    },
+    "recoveryTimeframes": {
+      "lookBackYears": 5,
+      "claimDeadlineAfterDeathMonths": 4,
+      "statuteLimit": "4 months from personal representative appointment or estate discovery"
+    },
+    "assetProtections": {
+      "homeEquityLimit": null,
+      "recoveryThresholdDollar": null,
+      "protectedAssets": [],
+      "minimumEstateForRecovery": null
+    },
+    "recoveryWaivers": {
+      "hardshipAvailable": true,
+      "criteria": [
+        "eviction or homelessness",
+        "loss of sole income source",
+        "financial ruin or significant hardship"
+      ],
+      "exemptHeirs": [
+        "surviving spouse",
+        "child under 21",
+        "blind or disabled child"
+      ],
+      "ageExemptions": false
+    },
+    "incomeTrustPolicies": {
+      "requiresQIT": true,
+      "spendDownType": "none (income-cap state)",
+      "incomeDisregards": []
+    },
+    "spousalProtections": {
+      "csra": 148620,
+      "mmna": 3715,
+      "jointPropertyTreatment": "may be subject to expanded estate recovery if not exempted",
+      "additionalProtections": ["no recovery from estate of surviving spouse"]
+    },
+    "administrative": {
+      "agency": "Oregon Department of Human Services (ODHS), Estate Administration Unit",
+      "appealAvailable": true,
+      "settlementAllowed": true,
+      "costBenefitEvaluation": true
+    },
+    "programEffectiveness": {
+      "annualRecovery": 20000000,
+      "percentMedicaidBudget": 0.0009,
+      "estatesPursued": "probate and non-probate estates including joint accounts, revocable trusts, life estates, beneficiary designations",
+      "avgRecoveryPerEstate": null
+    },
+    "legalEnvironment": {
+      "recentCases": [],
+      "legislationChanges": [],
+      "pendingChanges": false,
+      "regionalVariation": false
+    },
+    "strategicConsiderations": {
+      "effectiveStrategies": [
+        "establish irrevocable Medicaid Asset Protection Trusts (MAPTs) early",
+        "avoid relying solely on probate-avoidance tools like TOD deeds",
+        "implement QITs for over-income applicants",
+        "consult legal professionals to mitigate expanded estate exposure"
+      ],
+      "relevantPrecedents": [],
+      "usefulInstruments": [
+        "MAPT",
+        "QIT",
+        "asset titling strategy",
+        "beneficiary designation review",
+        "hardship waiver request"
+      ]
+    }
+  }
+  

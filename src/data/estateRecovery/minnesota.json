@@ -1,0 +1,92 @@
+{
+    "state": "Minnesota",
+    "homeExemptions": {
+      "primary": true,
+      "conditions": [
+        "spouse resides",
+        "minor child resides",
+        "blind or disabled child resides",
+        "intent to return if institutionalized"
+      ],
+      "postDeathTreatment": "subject to recovery from both probate and non-probate assets under expanded estate rules",
+      "exceptions": ["hardship waiver process available"],
+      "strength": "moderate"
+    },
+    "recoveryScope": {
+      "aggressiveness": "aggressive",
+      "optionalRecovery": true,
+      "tefraLiens": true,
+      "expandedEstate": true,
+      "nonProbateTransfersPursued": true
+    },
+    "recoveryTimeframes": {
+      "lookBackYears": 5,
+      "claimDeadlineAfterDeathMonths": 4,
+      "statuteLimit": "4 months from estate notice or death"
+    },
+    "assetProtections": {
+      "homeEquityLimit": null,
+      "recoveryThresholdDollar": null,
+      "protectedAssets": [],
+      "minimumEstateForRecovery": null
+    },
+    "recoveryWaivers": {
+      "hardshipAvailable": true,
+      "criteria": [
+        "heir would face eviction or homelessness",
+        "property is sole source of income",
+        "significant financial hardship"
+      ],
+      "exemptHeirs": [
+        "surviving spouse",
+        "child under 21",
+        "blind or disabled child"
+      ],
+      "ageExemptions": false
+    },
+    "incomeTrustPolicies": {
+      "requiresQIT": false,
+      "spendDownType": "medically needy",
+      "incomeDisregards": ["incurred medical expenses may reduce countable income"]
+    },
+    "spousalProtections": {
+      "csra": 148620,
+      "mmna": 3715,
+      "jointPropertyTreatment": "may be subject to recovery under expanded estate recovery",
+      "additionalProtections": ["recovery may extend to estate of surviving spouse"]
+    },
+    "administrative": {
+      "agency": "Minnesota Department of Human Services (DHS), Estate Recovery Program",
+      "appealAvailable": true,
+      "settlementAllowed": true,
+      "costBenefitEvaluation": true
+    },
+    "programEffectiveness": {
+      "annualRecovery": 35000000,
+      "percentMedicaidBudget": 0.0012,
+      "estatesPursued": "probate and non-probate estates including joint accounts, revocable trusts, life estates",
+      "avgRecoveryPerEstate": null
+    },
+    "legalEnvironment": {
+      "recentCases": [],
+      "legislationChanges": [],
+      "pendingChanges": false,
+      "regionalVariation": false
+    },
+    "strategicConsiderations": {
+      "effectiveStrategies": [
+        "use irrevocable Medicaid Asset Protection Trusts (MAPTs)",
+        "avoid revocable trusts, life estates, and joint tenancy for asset protection",
+        "submit hardship waiver with financial and dependency documentation",
+        "plan spend-down for applicants over income limit"
+      ],
+      "relevantPrecedents": [],
+      "usefulInstruments": [
+        "MAPT",
+        "hardship waiver application",
+        "spend-down worksheet",
+        "non-probate asset analysis"
+      ]
+    }
+  }
+      
