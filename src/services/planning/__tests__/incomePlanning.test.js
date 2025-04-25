@@ -55,7 +55,7 @@ jest.mock('../../utils/medicaidRulesLoader', () => ({
 }));
 
 // Mock the eligibility utils
-jest.mock('../../eligibility/eligibilityUtils', () => ({
+jest.mock('../../utils/eligibilityUtils', () => ({
   calculateTotalIncome: jest.fn().mockImplementation(income => {
     if (typeof income === 'object' && income !== null) {
       return Object.values(income).reduce((sum, value) => sum + (typeof value === 'number' ? value : 0), 0);

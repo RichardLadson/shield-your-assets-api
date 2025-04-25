@@ -1,4 +1,4 @@
-// src/services/eligibility/eligibilityUtils.js
+// src/services/planning/eligibilityUtils.js
 const logger = require('../../config/logger');
 
 /**
@@ -70,7 +70,35 @@ function classifyAssets(assets) {
   return { countableAssets, nonCountableAssets };
 }
 
+/**
+ * Determines urgency level based on client demographics and situation
+ * @param {number} age - Client age
+ * @param {string} healthStatus - Client health status
+ * @param {boolean} isCrisis - Whether situation is already a crisis
+ * @returns {string} Urgency level description
+ */
+function determineUrgency(age, healthStatus, isCrisis = false) {
+  if (isCrisis) {
+    return "High - Immediate crisis planning required";
+  }
+  
+  if (healthStatus === 'critical') {
+    return "High - Immediate crisis planning required";
+  }
+  
+  if (age >= 80) {
+    return "High - Immediate crisis planning required";
+  }
+  
+  if (age >= 70 || healthStatus === 'declining') {
+    return "Medium - Begin pre-planning soon";
+  }
+  
+  return "Low - Good candidate for long-term pre-planning";
+}
+
 module.exports = {
   calculateTotalIncome,
-  classifyAssets
+  classifyAssets,
+  determineUrgency
 };

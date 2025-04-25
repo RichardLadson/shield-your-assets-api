@@ -197,8 +197,13 @@ describe('Medicaid Planning Integration Tests', () => {
       expect(require('../postEligibilityPlanning').medicaidPostEligibilityPlanning).toHaveBeenCalled();
       expect(require('../estateRecovery').medicaidEstateRecoveryPlanning).toHaveBeenCalled();
       
-      // Community spouse planning should be called for all clients (logic handled inside module)
-      expect(require('../communitySpousePlanning').medicaidCommunitySpousePlanning).toHaveBeenCalled();
+      // If client is married, expect community spouse planning to be called
+      if (result.normalizedData.clientInfo.maritalStatus === 'married') {
+        expect(require('../communitySpousePlanning').medicaidCommunitySpousePlanning).toHaveBeenCalled();
+      } else {
+        // For single clients, expect it not to be called
+        expect(require('../communitySpousePlanning').medicaidCommunitySpousePlanning).not.toHaveBeenCalled();
+      }
       
       // Verify that the result includes data from all modules
       expect(result).toHaveProperty('careNeeds');

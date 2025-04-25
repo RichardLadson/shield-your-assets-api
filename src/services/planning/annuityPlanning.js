@@ -1,7 +1,7 @@
 // src/services/planning/annuityPlanning.js
 const logger = require('../../config/logger');
 const medicaidRulesLoader = require('../utils/medicaidRulesLoader');
-const eligibilityUtils = require('../eligibility/eligibilityUtils');
+const eligibilityUtils = require('../utils/eligibilityUtils');
 
 /**
  * Assesses whether an annuity is appropriate for the client

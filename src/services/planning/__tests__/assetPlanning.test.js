@@ -46,7 +46,7 @@ jest.mock('../../utils/medicaidRulesLoader', () => ({
 }));
 
 // Mock the eligibility utils
-jest.mock('../../eligibility/eligibilityUtils', () => ({
+jest.mock('../../utils/eligibilityUtils', () => ({
   classifyAssets: jest.fn().mockImplementation((assets) => {
     return {
       countableAssets: assets.countable || 0,

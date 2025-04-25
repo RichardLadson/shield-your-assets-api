@@ -1,6 +1,6 @@
 const logger = require('../../config/logger');
 const medicaidRulesLoader = require('../utils/medicaidRulesLoader');
-const eligibilityUtils = require('../eligibility/eligibilityUtils');
+const eligibilityUtils = require('../utils/eligibilityUtils');
 const inputValidation = require('../validation/inputValidation');
 
 /**
