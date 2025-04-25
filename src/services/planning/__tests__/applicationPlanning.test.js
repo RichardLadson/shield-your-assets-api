@@ -1,6 +1,42 @@
 // src/services/planning/__tests__/applicationPlanning.test.js
 
-const { 
+// Mock medicaidRulesLoader before loading the module under test
+const mockRules = {
+  florida: {
+    assetLimitSingle: 2000,
+    incomeLimit: 2523,
+    lookbackPeriod: 60,
+    applicationProcessing: {
+      typicalTimeframe: '45-90 days',
+      retroactiveEligibility: 3, // months
+      requiredFaceToFace: false
+    }
+  },
+  newyork: {
+    assetLimitSingle: 16800,
+    incomeLimit: 1563,
+    lookbackPeriod: 60,
+    applicationProcessing: {
+      typicalTimeframe: '45-90 days',
+      retroactiveEligibility: 3, // months
+      requiredFaceToFace: true
+    }
+  }
+};
+
+jest.mock('../../utils/medicaidRulesLoader', () => ({
+  getMedicaidRules: jest.fn((state) => {
+    if (state === 'florida') {
+      return mockRules.florida;
+    } else if (state === 'newyork') {
+      return mockRules.newyork;
+    } else {
+      throw new Error(`Rules not found for state: ${state}`);
+    }
+  })
+}));
+
+const {
   prepareApplicationTimeline,
   identifyRequiredDocuments,
   developApplicationStrategies,
@@ -67,43 +103,6 @@ describe('Application Planning Module', () => {
     }
   };
 
-  // Mock rules
-  const mockRules = {
-    florida: {
-      assetLimitSingle: 2000,
-      incomeLimit: 2523,
-      lookbackPeriod: 60,
-      applicationProcessing: {
-        typicalTimeframe: '45-90 days',
-        retroactiveEligibility: 3, // months
-        requiredFaceToFace: false
-      }
-    },
-    newyork: {
-      assetLimitSingle: 16800,
-      incomeLimit: 1563,
-      lookbackPeriod: 60,
-      applicationProcessing: {
-        typicalTimeframe: '45-90 days',
-        retroactiveEligibility: 3, // months
-        requiredFaceToFace: true
-      }
-    }
-  };
-
-  // Mock the rules loader
-  jest.mock('../medicaidRulesLoader', () => ({
-    getMedicaidRules: jest.fn((state) => {
-      if (state === 'florida') {
-        return mockRules.florida;
-      } else if (state === 'newyork') {
-        return mockRules.newyork;
-      } else {
-        throw new Error(`Rules not found for state: ${state}`);
-      }
-    })
-  }));
-
   // Unit tests for prepareApplicationTimeline
   describe('prepareApplicationTimeline', () => {
     test('should create appropriate timeline based on planning results', () => {
@@ -112,7 +111,7 @@ describe('Application Planning Module', () => {
         baseClientInfo,
         baseState
       );
-      
+
       expect(result).toBeDefined();
       expect(result.timeline).toBeDefined();
       expect(result.timeline.preparationPhase).toBeDefined();
@@ -122,27 +121,26 @@ describe('Application Planning Module', () => {
 
     test('should account for trust setup in timeline', () => {
       const result = prepareApplicationTimeline(
-        basePlanningResults, // Includes trust planning
+        basePlanningResults,
         baseClientInfo,
         baseState
       );
-      
+
       expect(result.timeline.preparationPhase.tasks).toContain(
         expect.objectContaining({
           task: expect.stringMatching(/trust/i)
         })
       );
-      
       expect(result.timeline.preparationPhase.estimatedTimeframe).toContain('month');
     });
 
     test('should account for annuity purchase in timeline', () => {
       const result = prepareApplicationTimeline(
-        basePlanningResults, // Includes annuity planning
+        basePlanningResults,
         baseClientInfo,
         baseState
       );
-      
+
       expect(result.timeline.preparationPhase.tasks).toContain(
         expect.objectContaining({
           task: expect.stringMatching(/annuity/i)
@@ -161,13 +159,13 @@ describe('Application Planning Module', () => {
           recommendations: ['Immediate nursing facility placement needed']
         }
       };
-      
+
       const result = prepareApplicationTimeline(
         urgentPlanningResults,
         baseClientInfo,
         baseState
       );
-      
+
       expect(result.timeline.isExpedited).toBe(true);
       expect(result.urgentConsiderations).toBeDefined();
       expect(result.timeline.expeditedSteps).toBeDefined();
@@ -182,7 +180,6 @@ describe('Application Planning Module', () => {
           excessResources: 0,
           resourceLimit: 2000
         },
-        // Remove complex planning requirements
         trustPlanningResults: {
           needsAssessment: { needsTrust: false }
         },
@@ -190,13 +187,13 @@ describe('Application Planning Module', () => {
           isAppropriate: false
         }
       };
-      
+
       const result = prepareApplicationTimeline(
         eligiblePlanningResults,
         baseClientInfo,
         baseState
       );
-      
+
       expect(result.timeline.preparationPhase.estimatedTimeframe).toContain('week');
       expect(result.timeline.isSimplified).toBe(true);
     });
@@ -207,16 +204,14 @@ describe('Application Planning Module', () => {
         baseClientInfo,
         'florida'
       );
-      
       const resultNY = prepareApplicationTimeline(
         basePlanningResults,
         baseClientInfo,
         'newyork'
       );
-      
-      // NY requires face-to-face interview, FL doesn't
-      expect(resultNY.timeline.applicationSubmission).toContain(expect.stringMatching(/face/i));
-      expect(resultFL.timeline.applicationSubmission).not.toContain(expect.stringMatching(/face/i));
+
+      expect(resultNY.timeline.applicationSubmission).toMatch(/face/i);
+      expect(resultFL.timeline.applicationSubmission).not.toMatch(/face/i);
     });
   });
 
@@ -230,40 +225,32 @@ describe('Application Planning Module', () => {
         basePlanningResults,
         baseState
       );
-      
+
       expect(result).toBeDefined();
-      expect(result.requiredDocuments).toBeInstanceOf(Array);
-      expect(result.requiredDocuments.length).toBeGreaterThan(5); // At least basic set of documents
-      
-      // Basic documents that should be included
-      expect(result.requiredDocuments).toContain(expect.objectContaining({
-        name: expect.stringMatching(/identification/i)
-      }));
-      
-      expect(result.requiredDocuments).toContain(expect.objectContaining({
-        name: expect.stringMatching(/social security/i)
-      }));
-      
-      expect(result.requiredDocuments).toContain(expect.objectContaining({
-        name: expect.stringMatching(/bank statement/i)
-      }));
+      expect(Array.isArray(result.requiredDocuments)).toBe(true);
+      expect(result.requiredDocuments.length).toBeGreaterThan(5);
+
+      expect(result.requiredDocuments).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: expect.stringMatching(/identification/i) }),
+          expect.objectContaining({ name: expect.stringMatching(/social security/i) }),
+          expect.objectContaining({ name: expect.stringMatching(/bank statement/i) })
+        ])
+      );
     });
 
     test('should identify real estate documents when applicable', () => {
       const result = identifyRequiredDocuments(
         baseClientInfo,
-        baseAssets, // Contains home
+        baseAssets,
         baseIncome,
         basePlanningResults,
         baseState
       );
-      
-      const realEstateDoc = result.requiredDocuments.find(doc => 
-        doc.name.toLowerCase().includes('deed') || 
-        doc.name.toLowerCase().includes('property') ||
-        doc.name.toLowerCase().includes('real estate')
+
+      const realEstateDoc = result.requiredDocuments.find(doc =>
+        /deed|property|real estate/i.test(doc.name)
       );
-      
       expect(realEstateDoc).toBeDefined();
     });
 
@@ -273,7 +260,6 @@ describe('Application Planning Module', () => {
         life_insurance: 25000,
         long_term_care_insurance: 100000
       };
-      
       const result = identifyRequiredDocuments(
         baseClientInfo,
         assetsWithInsurance,
@@ -281,11 +267,10 @@ describe('Application Planning Module', () => {
         basePlanningResults,
         baseState
       );
-      
-      const insuranceDoc = result.requiredDocuments.find(doc => 
-        doc.name.toLowerCase().includes('insurance')
+
+      const insuranceDoc = result.requiredDocuments.find(doc =>
+        /insurance/i.test(doc.name)
       );
-      
       expect(insuranceDoc).toBeDefined();
     });
 
@@ -297,7 +282,6 @@ describe('Application Planning Module', () => {
           recommendations: ['Set up irrevocable trust']
         }
       };
-      
       const result = identifyRequiredDocuments(
         baseClientInfo,
         baseAssets,
@@ -305,11 +289,10 @@ describe('Application Planning Module', () => {
         planningResultsWithTrust,
         baseState
       );
-      
-      const trustDoc = result.requiredDocuments.find(doc => 
-        doc.name.toLowerCase().includes('trust')
+
+      const trustDoc = result.requiredDocuments.find(doc =>
+        /trust/i.test(doc.name)
       );
-      
       expect(trustDoc).toBeDefined();
     });
 
@@ -321,7 +304,6 @@ describe('Application Planning Module', () => {
           recommendations: ['Purchase Medicaid-compliant annuity']
         }
       };
-      
       const result = identifyRequiredDocuments(
         baseClientInfo,
         baseAssets,
@@ -329,11 +311,10 @@ describe('Application Planning Module', () => {
         planningResultsWithAnnuity,
         baseState
       );
-      
-      const annuityDoc = result.requiredDocuments.find(doc => 
-        doc.name.toLowerCase().includes('annuity')
+
+      const annuityDoc = result.requiredDocuments.find(doc =>
+        /annuity/i.test(doc.name)
       );
-      
       expect(annuityDoc).toBeDefined();
     });
 
@@ -347,7 +328,6 @@ describe('Application Planning Module', () => {
           needsLongTermCare: false
         }
       };
-      
       const result = identifyRequiredDocuments(
         marriedClientInfo,
         baseAssets,
@@ -355,19 +335,15 @@ describe('Application Planning Module', () => {
         basePlanningResults,
         baseState
       );
-      
-      // Should include marriage certificate
-      const marriageDoc = result.requiredDocuments.find(doc => 
-        doc.name.toLowerCase().includes('marriage')
+
+      const marriageDoc = result.requiredDocuments.find(doc =>
+        /marriage/i.test(doc.name)
       );
-      
       expect(marriageDoc).toBeDefined();
-      
-      // Should include spouse documents
-      const spouseDoc = result.requiredDocuments.find(doc => 
-        doc.description.toLowerCase().includes('spouse')
+
+      const spouseDoc = result.requiredDocuments.find(doc =>
+        /spouse/i.test(doc.description)
       );
-      
       expect(spouseDoc).toBeDefined();
     });
 
@@ -379,8 +355,7 @@ describe('Application Planning Module', () => {
         basePlanningResults,
         baseState
       );
-      
-      expect(result.organizationInstructions).toBeDefined();
+      expect(Array.isArray(result.organizationInstructions)).toBe(true);
       expect(result.organizationInstructions.length).toBeGreaterThan(0);
     });
   });
@@ -402,7 +377,6 @@ describe('Application Planning Module', () => {
           followUpSteps: ['Respond promptly to information requests']
         }
       };
-      
       const documentResult = {
         requiredDocuments: [
           { name: 'Photo ID', description: 'Government-issued identification' },
@@ -411,7 +385,7 @@ describe('Application Planning Module', () => {
         ],
         organizationInstructions: ['Organize documents in a binder with labeled tabs']
       };
-      
+
       const result = developApplicationStrategies(
         timeline,
         documentResult,
@@ -419,9 +393,9 @@ describe('Application Planning Module', () => {
         baseClientInfo,
         baseState
       );
-      
+
       expect(result).toBeDefined();
-      expect(result.applicationStrategies).toBeInstanceOf(Array);
+      expect(Array.isArray(result.applicationStrategies)).toBe(true);
       expect(result.submissionRecommendations).toBeDefined();
       expect(result.followUpPlan).toBeDefined();
     });
@@ -432,12 +406,8 @@ describe('Application Planning Module', () => {
         applicationSubmission: 'Submit after preparation complete',
         processingPhase: { typicalTimeframe: '45-90 days' }
       };
-      
-      const documentResult = {
-        requiredDocuments: [],
-        organizationInstructions: []
-      };
-      
+      const documentResult = { requiredDocuments: [], organizationInstructions: [] };
+
       const result = developApplicationStrategies(
         timeline,
         documentResult,
@@ -445,9 +415,8 @@ describe('Application Planning Module', () => {
         baseClientInfo,
         baseState
       );
-      
-      // Should include estate planning considerations
-      expect(result.estatePlanningRecommendations).toBeDefined();
+
+      expect(Array.isArray(result.estatePlanningRecommendations)).toBe(true);
       expect(result.estatePlanningRecommendations.length).toBeGreaterThan(0);
     });
 
@@ -457,20 +426,15 @@ describe('Application Planning Module', () => {
         applicationSubmission: 'Submit after preparation complete',
         processingPhase: { typicalTimeframe: '45-90 days' }
       };
-      
-      const documentResult = {
-        requiredDocuments: [],
-        organizationInstructions: []
-      };
-      
+      const documentResult = { requiredDocuments: [], organizationInstructions: [] };
       const planningResultsWithRisks = {
         ...basePlanningResults,
         divestmentPlanningResults: {
-          penaltyPeriodEstimate: 6, // Has penalty period
+          penaltyPeriodEstimate: 6,
           strategies: ['Develop mitigation strategy for past transfers']
         }
       };
-      
+
       const result = developApplicationStrategies(
         timeline,
         documentResult,
@@ -478,9 +442,8 @@ describe('Application Planning Module', () => {
         baseClientInfo,
         baseState
       );
-      
-      expect(result.appealProcessPlan).toBeDefined();
-      expect(result.appealProcessPlan).toContain(expect.stringMatching(/appeal/i));
+
+      expect(result.appealProcessPlan).toMatch(/appeal/i);
     });
 
     test('should provide income trust submission guidance when needed', () => {
@@ -489,12 +452,7 @@ describe('Application Planning Module', () => {
         applicationSubmission: 'Submit after preparation complete',
         processingPhase: { typicalTimeframe: '45-90 days' }
       };
-      
-      const documentResult = {
-        requiredDocuments: [],
-        organizationInstructions: []
-      };
-      
+      const documentResult = { requiredDocuments: [], organizationInstructions: [] };
       const planningResultsWithIncomeTrust = {
         ...basePlanningResults,
         incomePlanningResults: {
@@ -508,7 +466,7 @@ describe('Application Planning Module', () => {
           incomeLimit: 2500
         }
       };
-      
+
       const result = developApplicationStrategies(
         timeline,
         documentResult,
@@ -516,14 +474,12 @@ describe('Application Planning Module', () => {
         baseClientInfo,
         baseState
       );
-      
-      // Should include QIT-specific guidance
-      expect(result.applicationStrategies).toContain(
-        expect.stringMatching(/income trust/i)
+
+      expect(result.applicationStrategies).toEqual(
+        expect.arrayContaining([expect.stringMatching(/income trust/i)])
       );
-      
-      expect(result.submissionRecommendations).toContain(
-        expect.stringMatching(/income trust/i)
+      expect(result.submissionRecommendations).toEqual(
+        expect.arrayContaining([expect.stringMatching(/income trust/i)])
       );
     });
 
@@ -533,12 +489,7 @@ describe('Application Planning Module', () => {
         applicationSubmission: 'Submit after preparation complete',
         processingPhase: { typicalTimeframe: '45-90 days' }
       };
-      
-      const documentResult = {
-        requiredDocuments: [],
-        organizationInstructions: []
-      };
-      
+      const documentResult = { requiredDocuments: [], organizationInstructions: [] };
       const planningResultsWithFacility = {
         ...basePlanningResults,
         careResults: {
@@ -553,7 +504,7 @@ describe('Application Planning Module', () => {
           recommendations: ['Consider nursing facility care']
         }
       };
-      
+
       const result = developApplicationStrategies(
         timeline,
         documentResult,
@@ -561,12 +512,8 @@ describe('Application Planning Module', () => {
         baseClientInfo,
         baseState
       );
-      
-      // Should include facility-specific guidance
-      expect(result.facilityConsiderations).toBeDefined();
-      expect(result.facilityConsiderations).toContain(
-        expect.stringMatching(/Sample Nursing Center/i)
-      );
+
+      expect(result.facilityConsiderations).toMatch(/Sample Nursing Center/i);
     });
   });
 
@@ -580,13 +527,13 @@ describe('Application Planning Module', () => {
         basePlanningResults,
         baseState
       );
-      
+
       expect(result).toBeDefined();
       expect(result.status).toBe('success');
       expect(result.timeline).toBeDefined();
       expect(result.requiredDocuments).toBeDefined();
       expect(result.applicationStrategies).toBeDefined();
-      expect(result.recommendations).toBeInstanceOf(Array);
+      expect(Array.isArray(result.recommendations)).toBe(true);
     });
 
     test('should handle married couples with community spouse', async () => {
@@ -599,20 +546,15 @@ describe('Application Planning Module', () => {
           needsLongTermCare: false
         }
       };
-      
       const planningResultsWithSpouse = {
         ...basePlanningResults,
         communitySpousePlanningResults: {
-          mmnaCalculation: {
-            allowance: 3216
-          },
-          csraCalculation: {
-            allowance: 130380
-          },
+          mmnaCalculation: { allowance: 3216 },
+          csraCalculation: { allowance: 130380 },
           strategies: ['Maximize CSRA']
         }
       };
-      
+
       const result = await applicationPlanning(
         marriedClientInfo,
         baseAssets,
@@ -620,18 +562,16 @@ describe('Application Planning Module', () => {
         planningResultsWithSpouse,
         baseState
       );
-      
-      // Should include spouse-specific considerations
+
       expect(result.spouseConsiderations).toBeDefined();
-      expect(result.requiredDocuments).toContain(
-        expect.objectContaining({
-          name: expect.stringMatching(/marriage/i)
-        })
+      expect(result.requiredDocuments).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: expect.stringMatching(/marriage/i) })
+        ])
       );
     });
 
     test('should handle errors gracefully', async () => {
-      // Test with invalid state
       const result = await applicationPlanning(
         baseClientInfo,
         baseAssets,
@@ -639,7 +579,7 @@ describe('Application Planning Module', () => {
         basePlanningResults,
         'invalid'
       );
-      
+
       expect(result.status).toBe('error');
       expect(result.error).toBeDefined();
     });
@@ -652,11 +592,11 @@ describe('Application Planning Module', () => {
         basePlanningResults,
         baseState
       );
-      
+
       expect(result.planningReport).toBeDefined();
       expect(result.planningReport.summary).toBeDefined();
-      expect(result.planningReport.recommendations).toBeInstanceOf(Array);
-      expect(result.planningReport.nextSteps).toBeInstanceOf(Array);
+      expect(Array.isArray(result.planningReport.recommendations)).toBe(true);
+      expect(Array.isArray(result.planningReport.nextSteps)).toBe(true);
     });
 
     test('should handle different state requirements appropriately', async () => {
@@ -667,7 +607,6 @@ describe('Application Planning Module', () => {
         basePlanningResults,
         'florida'
       );
-      
       const resultNY = await applicationPlanning(
         baseClientInfo,
         baseAssets,
@@ -675,17 +614,15 @@ describe('Application Planning Module', () => {
         basePlanningResults,
         'newyork'
       );
-      
-      // Recommendations should vary by state
-      expect(resultFL.stateSpecificConsiderations).not.toEqual(resultNY.stateSpecificConsiderations);
-      
-      // NY requires face-to-face interview
-      expect(resultNY.applicationProcess).toContain(expect.stringMatching(/face/i));
-      expect(resultFL.applicationProcess).not.toContain(expect.stringMatching(/face/i));
+
+      expect(resultFL.stateSpecificConsiderations).not.toEqual(
+        resultNY.stateSpecificConsiderations
+      );
+      expect(resultNY.applicationProcess).toMatch(/face/i);
+      expect(resultFL.applicationProcess).not.toMatch(/face/i);
     });
 
     test('should provide specific timeline for eligible vs. non-eligible clients', async () => {
-      // Already eligible client
       const eligiblePlanningResults = {
         ...basePlanningResults,
         eligibilityResults: {
@@ -694,83 +631,26 @@ describe('Application Planning Module', () => {
           excessResources: 0,
           resourceLimit: 2000
         },
-        trustPlanningResults: {
-          needsAssessment: { needsTrust: false }
-        },
-        annuityPlanningResults: {
-          isAppropriate: false
-        }
+        trustPlanningResults: { needsAssessment: { needsTrust: false } },
+        annuityPlanningResults: { isAppropriate: false }
       };
-      
       const resultEligible = await applicationPlanning(
         baseClientInfo,
-        {
-          countable: 1500, // Under the limit
-          home: 250000,
-          automobile: 15000
-        },
+        { countable: 1500, home: 250000, automobile: 15000 },
         baseIncome,
         eligiblePlanningResults,
         baseState
       );
-      
       const resultIneligible = await applicationPlanning(
         baseClientInfo,
-        baseAssets, // Over the limit
+        baseAssets,
         baseIncome,
         basePlanningResults,
         baseState
       );
-      
-      // Eligible client should have faster timeline
+
       expect(resultEligible.timeline.preparationPhase.estimatedTimeframe).toContain('week');
       expect(resultIneligible.timeline.preparationPhase.estimatedTimeframe).toContain('month');
     });
   });
 });
-
-      const realEstateDoc = result.requiredDocuments.find(doc => 
-        doc.name.toLowerCase().includes('deed') || 
-        doc.name.toLowerCase().includes('property') ||
-        doc.name.toLowerCase().includes('real estate')
-      );
-      
-      expect(realEstateDoc).toBeDefined();
-    });
-
-    test('should identify insurance documents when applicable', () => {
-      const assetsWithInsurance = {
-        ...baseAssets,
-        life_insurance: 25000,
-        long_term_care_insurance: 100000
-      };
-      
-      const result = identifyRequiredDocuments(
-        baseClientInfo,
-        assetsWithInsurance,
-        baseIncome,
-        basePlanningResults,
-        baseState
-      );
-      
-      const insuranceDoc = result.requiredDocuments.find(doc => 
-        doc.name.toLowerCase().includes('insurance')
-      );
-      
-      expect(insuranceDoc).toBeDefined();
-    });
-
-    test('should include trust documents when trust planning is involved', () => {
-      const planningResultsWithTrust = {
-        ...basePlanningResults,
-        trustPlanningResults: {
-          needsAssessment: { needsTrust: true },
-          recommendations: ['Set up irrevocable trust']
-        }
-      };
-      
-      const result = identifyRequiredDocuments(
-        baseClientInfo,
-        baseAssets,
-        baseIncome,
-        planningResultsWithTrust,

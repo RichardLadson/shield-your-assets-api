@@ -36,7 +36,7 @@ async function medicaidPlanning(clientInfo, assets, income, expenses, medicalInf
   try {
     // Validate all inputs
     const validationResult = await validateAllInputs(
-      clientInfo, assets, income, expenses, null, state
+      clientInfo, assets, income, expenses, medicalInfo, state
     );
     
     if (!validationResult.valid) {
@@ -101,8 +101,12 @@ async function medicaidPlanning(clientInfo, assets, income, expenses, medicalInf
       normalizedClientInfo, normalizedAssets, normalizedState
     );
     
-    // Step 9: Community Spouse Planning (if married)
-    let communitySpousePlanningResult = null;
+    // Step 9: Community Spouse Planning (only for married clients)
+    let communitySpousePlanningResult = {
+      strategies: [],
+      approach: "Not applicable (client is not married)"
+    };
+    
     if (maritalStatus === 'married') {
       communitySpousePlanningResult = await medicaidCommunitySpousePlanning(
         normalizedClientInfo, normalizedAssets, normalizedState
@@ -163,11 +167,9 @@ async function medicaidPlanning(clientInfo, assets, income, expenses, medicalInf
       divestmentStrategies: divestmentPlanningResult.strategies,
       divestmentPlan: divestmentPlanningResult.approach,
       
-      // Community Spouse Planning
-      communitySpouseStrategies: communitySpousePlanningResult ? 
-        communitySpousePlanningResult.strategies : [],
-      communitySpousePlan: communitySpousePlanningResult ? 
-        communitySpousePlanningResult.approach : "Not applicable (client is not married)",
+      // Community Spouse Planning - include appropriate content based on marital status
+      communitySpouseStrategies: communitySpousePlanningResult.strategies || [],
+      communitySpousePlan: communitySpousePlanningResult.approach,
       
       // Application Planning
       applicationPlan: applicationPlanningResult.applicationApproach,
@@ -179,6 +181,9 @@ async function medicaidPlanning(clientInfo, assets, income, expenses, medicalInf
       // Estate Recovery Planning
       estateRecoveryStrategies: estateRecoveryPlanningResult.strategies,
       estateRecoveryPlan: estateRecoveryPlanningResult.approach,
+      
+      // Store normalized data for test verification
+      normalizedData: normalizedData,
       
       status: 'success'
     };

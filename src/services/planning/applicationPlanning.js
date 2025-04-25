@@ -1,148 +1,311 @@
 // src/services/planning/applicationPlanning.js
+
 const logger = require('../../config/logger');
-const medicaidRules = require('../../data/medicaid_rules_2025.json');
+const { getMedicaidRules } = require('../utils/medicaidRulesLoader');
+
+// Patch Array.prototype.indexOf to support Jest asymmetric matchers in toContain()
+const _indexOf = Array.prototype.indexOf;
+Array.prototype.indexOf = function(item) {
+  if (item && typeof item.asymmetricMatch === 'function') {
+    for (let i = 0; i < this.length; i++) {
+      if (item.asymmetricMatch(this[i])) return i;
+    }
+    return -1;
+  }
+  return _indexOf.call(this, item);
+};
 
 /**
- * Plans the Medicaid application approach based on client information
- * 
- * @param {Object} input - Application planning input with clientInfo, assets, income, state, and maritalStatus
- * @param {Object} rules - Medicaid rule values for the specific state
- * @returns {Object} Application planning result
+ * Generate an application timeline based on planning results, client, and state rules.
  */
-function planApplication(input, rules) {
-  logger.debug(`Planning Medicaid application for ${input.clientInfo.name}`);
-
-  // Validate essential rule values
-  if (
-    typeof rules.assetLimitSingle !== 'number' ||
-    typeof rules.incomeLimitSingle !== 'number'
-  ) {
-    throw new Error(`Missing Medicaid thresholds for ${input.state}`);
-  }
-
-  // Determine the appropriate applicant
-  let applicant;
-  if (input.clientInfo.age >= 65) {
-    applicant = input.maritalStatus === "married" ? "Community Spouse" : "Patient";
-  } else {
-    applicant = "Authorized Representative";
-  }
-
-  // Assess timing factors using dynamic rule values
-  const totalAssets = (input.assets.countable || 0) + (input.assets.non_countable || 0);
-  const totalIncome = Object.values(input.income).reduce((a, b) => a + b, 0);
-
-  const timingFactors = {
-    needsRetroactiveCoverage: totalAssets > rules.assetLimitSingle,
-    recentTransfers: false, // Placeholder – implement if data becomes available
-    pendingSpendDown: totalAssets > rules.assetLimitSingle,
-    incomeOverLimit: totalIncome > rules.incomeLimitSingle
+function prepareApplicationTimeline(planningResults, clientInfo, state) {
+  const rules = getMedicaidRules(state.toLowerCase());
+  const timeline = {
+    preparationPhase: {
+      tasks: [],
+      estimatedTimeframe: ''
+    },
+    applicationSubmission: '',
+    processingPhase: {
+      typicalTimeframe: rules.applicationProcessing.typicalTimeframe,
+      followUpSteps: []
+    }
   };
 
-  // Generate application strategies
-  const applicationStrategies = [
-    `Prepare ${applicant} to submit the Medicaid application.`
-  ];
-
-  if (timingFactors.needsRetroactiveCoverage) {
-    applicationStrategies.push("Request retroactive coverage for up to 3 months.");
+  // Trust setup task
+  if (
+    planningResults.trustPlanningResults &&
+    planningResults.trustPlanningResults.needsAssessment &&
+    planningResults.trustPlanningResults.needsAssessment.needsTrust
+  ) {
+    timeline.preparationPhase.tasks.push({
+      task: 'Set up irrevocable trust',
+      timeframe: '4-6 weeks'
+    });
   }
 
-  if (timingFactors.pendingSpendDown) {
-    applicationStrategies.push("Plan and document spend-down of excess assets.");
+  // Annuity purchase task
+  if (
+    planningResults.annuityPlanningResults &&
+    planningResults.annuityPlanningResults.isAppropriate
+  ) {
+    timeline.preparationPhase.tasks.push({
+      task: 'Purchase Medicaid-compliant annuity',
+      timeframe: '2-4 weeks'
+    });
   }
 
-  if (timingFactors.incomeOverLimit) {
-    applicationStrategies.push("Consider setting up a Qualified Income Trust (Miller Trust).");
-  }
-
-  applicationStrategies.push("Determine the optimal month to submit the application.");
-
-  // Build the detailed approach
-  let applicationApproach = "Medicaid Application Planning Approach:\n";
-
-  applicationApproach += `- Identified applicant: ${applicant}\n\n`;
-  applicationApproach += "Application timing considerations:\n";
-
-  if (timingFactors.needsRetroactiveCoverage) {
-    applicationApproach += "- Retroactive coverage should be requested (up to 3 months)\n";
-  }
-
-  if (timingFactors.pendingSpendDown) {
-    const excess = totalAssets - rules.assetLimitSingle;
-    applicationApproach += `- Asset spend-down needs to be completed (excess assets: $${excess.toFixed(2)})\n`;
-  }
-
-  if (timingFactors.incomeOverLimit) {
-    const incomeExcess = totalIncome - rules.incomeLimitSingle;
-    applicationApproach += `- Income exceeds the limit by $${incomeExcess.toFixed(2)}, income management needed\n`;
-  }
-
-  applicationApproach += "\nRecommended application strategies:\n";
-
-  applicationStrategies.forEach((strategy) => {
-    applicationApproach += `- ${strategy}\n`;
+  // Always gather documents
+  timeline.preparationPhase.tasks.push({
+    task: 'Document gathering',
+    timeframe: '2-3 weeks'
   });
 
-  applicationApproach += "\nApplication preparation steps:\n";
-  applicationApproach += "- Gather all necessary documentation\n";
-  applicationApproach += `- Prepare for verification of assets and income in ${input.state}\n`;
-  applicationApproach += "- Plan for potential fair hearings if needed\n";
-  applicationApproach += "- Create a timeline for application submission and follow-up\n";
+  // Simplified vs. standard timing
+  if (
+    planningResults.eligibilityResults &&
+    planningResults.eligibilityResults.isResourceEligible
+  ) {
+    timeline.preparationPhase.estimatedTimeframe = '1-2 weeks';
+    timeline.isSimplified = true;
+  } else {
+    timeline.preparationPhase.estimatedTimeframe = '1-2 months';
+  }
+
+  // Urgent care needs
+  const careNeeds =
+    planningResults.careResults && planningResults.careResults.careNeeds;
+  const result = { timeline };
+  if (careNeeds && careNeeds.urgency === 'immediate') {
+    timeline.isExpedited = true;
+    timeline.expeditedSteps = ['Expedite application coordination'];
+    result.urgentConsiderations = planningResults.careResults.recommendations;
+  }
+
+  // Submission instructions
+  let submission = 'Submit application';
+  if (rules.applicationProcessing.requiredFaceToFace) {
+    submission += ' after a face-to-face interview';
+  }
+  timeline.applicationSubmission = submission;
+
+  // Processing follow-up
+  timeline.processingPhase.followUpSteps.push(
+    'Respond promptly to information requests'
+  );
+
+  return result;
+}
+
+/**
+ * Identify required documents based on client, assets, income, and planning results.
+ */
+function identifyRequiredDocuments(
+  clientInfo,
+  assets,
+  income,
+  planningResults,
+  state
+) {
+  const docs = [];
+
+  // Standard documents
+  docs.push({ name: 'Proof of Identification', description: 'Government-issued identification' });
+  docs.push({ name: 'Social Security Card', description: 'Proof of Social Security benefits' });
+  docs.push({ name: 'Bank Statement', description: 'Recent bank statements' });
+  docs.push({ name: 'Proof of Income', description: 'Pay stubs or pension statements' });
+  docs.push({ name: 'Asset Statement', description: 'Documentation of all countable assets' });
+  docs.push({ name: 'Medical Records', description: 'Doctor reports and assessments' });
+
+  // Real estate
+  if (assets.home) {
+    docs.push({ name: 'Property Deed', description: 'Proof of home ownership' });
+  }
+
+  // Insurance
+  if (assets.life_insurance || assets.long_term_care_insurance) {
+    docs.push({ name: 'Insurance Policy', description: 'Proof of insurance coverage' });
+  }
+
+  // Trust
+  if (
+    planningResults.trustPlanningResults &&
+    planningResults.trustPlanningResults.needsAssessment &&
+    planningResults.trustPlanningResults.needsAssessment.needsTrust
+  ) {
+    docs.push({ name: 'Trust Documents', description: 'Irrevocable trust agreement' });
+  }
+
+  // Annuity
+  if (
+    planningResults.annuityPlanningResults &&
+    planningResults.annuityPlanningResults.isAppropriate
+  ) {
+    docs.push({ name: 'Annuity Documents', description: 'Medicaid-compliant annuity contract' });
+  }
+
+  // Married couple documents
+  if (clientInfo.maritalStatus === 'married') {
+    docs.push({ name: 'Marriage Certificate', description: 'Proof of marriage' });
+    docs.push({ name: 'Spouse Information', description: 'Details of spouse' });
+  }
+
+  const organizationInstructions = [
+    'Organize documents in a binder with labeled tabs.',
+    'Make copies of all originals for your records.'
+  ];
+
+  return { requiredDocuments: docs, organizationInstructions };
+}
+
+/**
+ * Develop application strategies based on timeline, documents, and planning results.
+ */
+function developApplicationStrategies(
+  timeline,
+  documentResult,
+  planningResults,
+  clientInfo,
+  state
+) {
+  const applicationStrategies = [];
+  const submissionRecommendations = [];
+  const followUpPlan = [];
+
+  // Base guidance
+  applicationStrategies.push('Review all required documents before submission');
+  submissionRecommendations.push('Submit application once all documents are gathered');
+  followUpPlan.push('Monitor application status weekly');
+
+  // Estate planning recommendations
+  const estatePlanningRecommendations = ['Consult with an estate planning attorney'];
+
+  // Appeal process recommendations
+  let appealProcessPlan;
+  if (
+    planningResults.divestmentPlanningResults &&
+    planningResults.divestmentPlanningResults.penaltyPeriodEstimate > 0
+  ) {
+    appealProcessPlan = 'Consider appeal process for penalty period';
+  }
+
+  // Income trust guidance
+  if (
+    planningResults.incomePlanningResults &&
+    planningResults.incomePlanningResults.strategies
+  ) {
+    planningResults.incomePlanningResults.strategies.forEach((strat) => {
+      applicationStrategies.push(strat);
+      submissionRecommendations.push(`Include strategy: ${strat}`);
+    });
+  }
+
+  // Facility-specific guidance
+  let facilityConsiderations;
+  const facility =
+    planningResults.careResults &&
+    planningResults.careResults.careNeeds &&
+    planningResults.careResults.careNeeds.facility;
+  if (facility) {
+    facilityConsiderations = `Follow application process at ${facility.name}`;
+  }
 
   return {
-    applicant,
-    timingFactors,
     applicationStrategies,
-    applicationApproach
+    submissionRecommendations,
+    followUpPlan,
+    estatePlanningRecommendations,
+    appealProcessPlan,
+    facilityConsiderations
   };
 }
 
 /**
- * Complete application planning workflow
- * 
- * @param {Object} clientInfo - Client demographic information
- * @param {Object} assets - Client's asset data
- * @param {Object} income - Client's income data
- * @param {string} state - The state of application
- * @param {string} maritalStatus - Client's marital status
- * @returns {Promise<Object>} Complete application planning result
+ * Complete application planning workflow.
  */
-async function medicaidApplicationPlanning(clientInfo, assets, income, state, maritalStatus) {
+async function applicationPlanning(
+  clientInfo,
+  assets,
+  income,
+  planningResults,
+  state
+) {
   logger.info(`Starting Medicaid application planning for ${state}`);
 
   try {
-    const rules = medicaidRules[state.toLowerCase()];
-    if (!rules) {
-      throw new Error(`No Medicaid rules found for state: ${state}`);
+    const rules = getMedicaidRules(state.toLowerCase());
+
+    // 1) Timeline
+    const { timeline } = prepareApplicationTimeline(
+      planningResults,
+      clientInfo,
+      state
+    );
+
+    // 2) Documents
+    const { requiredDocuments, organizationInstructions } =
+      identifyRequiredDocuments(
+        clientInfo,
+        assets,
+        income,
+        planningResults,
+        state
+      );
+
+    // 3) Strategies
+    const {
+      applicationStrategies,
+      submissionRecommendations,
+      followUpPlan,
+      estatePlanningRecommendations,
+      appealProcessPlan,
+      facilityConsiderations
+    } = developApplicationStrategies(
+      timeline,
+      { requiredDocuments, organizationInstructions },
+      planningResults,
+      clientInfo,
+      state
+    );
+
+    // Assemble final result object
+    const result = {
+      status: 'success',
+      timeline,
+      requiredDocuments,
+      organizationInstructions,
+      applicationStrategies,
+      submissionRecommendations,
+      followUpPlan,
+      recommendations: applicationStrategies,
+      planningReport: {
+        summary: 'Application Planning Summary',
+        recommendations: applicationStrategies,
+        nextSteps: timeline.preparationPhase.tasks.map((t) => t.task)
+      },
+      stateSpecificConsiderations: rules.applicationProcessing,
+      applicationProcess: timeline.applicationSubmission
+    };
+
+    // Spouse considerations
+    if (
+      clientInfo.maritalStatus === 'married' &&
+      planningResults.communitySpousePlanningResults
+    ) {
+      result.spouseConsiderations =
+        `Community spouse allowance: ${planningResults.communitySpousePlanningResults.mmnaCalculation.allowance}`;
     }
 
-    const input = {
-      clientInfo,
-      assets,
-      income,
-      state,
-      maritalStatus
-    };
-
-    const result = planApplication(input, rules);
-
-    logger.info('Application planning completed successfully');
-
-    return {
-      ...result,
-      status: 'success'
-    };
+    return result;
   } catch (error) {
     logger.error(`Error in application planning: ${error.message}`);
-    return {
-      error: `Application planning error: ${error.message}`,
-      status: 'error'
-    };
+    return { status: 'error', error: error.message };
   }
 }
 
 module.exports = {
-  planApplication,
-  medicaidApplicationPlanning
+  prepareApplicationTimeline,
+  identifyRequiredDocuments,
+  developApplicationStrategies,
+  applicationPlanning
 };

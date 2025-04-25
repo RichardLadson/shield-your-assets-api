@@ -19,6 +19,8 @@ jest.mock('../../validation/inputValidation', () => ({
       assets: { countable: 5000, home: 150000 },
       income: { social_security: 1500, pension: 800 },
       expenses: { health_insurance: 200, housing: 1000 },
+      medicalInfo: { diagnoses: ['dementia'], adlLimitations: ['bathing', 'toileting'] },
+      livingInfo: { currentSetting: 'home', caregiverSupport: 'family' },
       state: 'florida'
     }
   })
@@ -195,7 +197,7 @@ describe('Medicaid Planning Integration Tests', () => {
       expect(require('../postEligibilityPlanning').medicaidPostEligibilityPlanning).toHaveBeenCalled();
       expect(require('../estateRecovery').medicaidEstateRecoveryPlanning).toHaveBeenCalled();
       
-      // For a married client, communitySpousePlanning should be called
+      // Community spouse planning should be called for all clients (logic handled inside module)
       expect(require('../communitySpousePlanning').medicaidCommunitySpousePlanning).toHaveBeenCalled();
       
       // Verify that the result includes data from all modules
@@ -223,26 +225,41 @@ describe('Medicaid Planning Integration Tests', () => {
     });
     
     test('should pass correct normalized data to each module', async () => {
+      const mockNormalizedData = {
+        clientInfo: { name: 'Test Client', age: 75, maritalStatus: 'single' },
+        assets: { countable: 5000, home: 150000 },
+        income: { social_security: 1500, pension: 800 },
+        expenses: { health_insurance: 200, housing: 1000 },
+        medicalInfo: { diagnoses: ['dementia'], adlLimitations: ['bathing', 'toileting'] },
+        livingInfo: { currentSetting: 'home', caregiverSupport: 'family' },
+        state: 'florida'
+      };
+      
+      require('../../validation/inputValidation').validateAllInputs.mockResolvedValueOnce({
+        valid: true,
+        message: 'All inputs are valid',
+        normalizedData: mockNormalizedData
+      });
+      
       await medicaidPlanning(clientInfo, assets, income, expenses, medicalInfo, livingInfo, state);
       
       // Verify that assetPlanning received the normalized data
       const assetPlanningMock = require('../assetPlanning').medicaidAssetPlanning;
-      const normalizedData = require('../../validation/inputValidation').validateAllInputs().normalizedData;
       
       expect(assetPlanningMock).toHaveBeenCalledWith(
-        normalizedData.clientInfo,
-        normalizedData.assets,
-        normalizedData.state
+        mockNormalizedData.clientInfo,
+        mockNormalizedData.assets,
+        mockNormalizedData.state
       );
       
       // Verify that incomePlanning received the normalized data
       const incomePlanningMock = require('../incomePlanning').medicaidIncomePlanning;
       
       expect(incomePlanningMock).toHaveBeenCalledWith(
-        normalizedData.clientInfo,
-        normalizedData.income,
-        normalizedData.expenses,
-        normalizedData.state
+        mockNormalizedData.clientInfo,
+        mockNormalizedData.income,
+        mockNormalizedData.expenses,
+        mockNormalizedData.state
       );
     });
     
@@ -277,40 +294,35 @@ describe('Medicaid Planning Integration Tests', () => {
     });
     
     test('should conditionally include community spouse planning for married clients', async () => {
-      // Reset mocks
-      jest.clearAllMocks();
+      // Test with married client
+      const marriedClientInfo = { ...clientInfo, maritalStatus: 'married' };
       
-      // Test with single client
-      const singleClient = { ...clientInfo, maritalStatus: 'single' };
-      await medicaidPlanning(singleClient, assets, income, expenses, medicalInfo, livingInfo, state);
-      
-      // Community spouse planning should not be called for single clients
-      const communitySpousePlanningMock = require('../communitySpousePlanning').medicaidCommunitySpousePlanning;
-      expect(communitySpousePlanningMock).toHaveBeenCalled(); // Still called but not used in report
-      
-      // Reset mocks
-      jest.clearAllMocks();
-      
-      // Change validation to return married client
+      // Update validation mock for married client
       require('../../validation/inputValidation').validateAllInputs.mockResolvedValueOnce({
         valid: true,
         message: 'All inputs are valid',
         normalizedData: {
-          clientInfo: { name: 'Test Client', age: 75, maritalStatus: 'married' },
-          assets: { countable: 5000, home: 150000 },
-          income: { social_security: 1500, pension: 800 },
-          expenses: { health_insurance: 200, housing: 1000 },
-          state: 'florida'
+          clientInfo: { ...clientInfo, maritalStatus: 'married' },
+          assets: assets,
+          income: income,
+          expenses: expenses,
+          medicalInfo: medicalInfo,
+          livingInfo: livingInfo,
+          state: state
         }
       });
       
-      // Test with married client
-      const marriedClient = { ...clientInfo, maritalStatus: 'married' };
-      const marriedResult = await medicaidPlanning(marriedClient, assets, income, expenses, medicalInfo, livingInfo, state);
+      // Clear mocks before test
+      jest.clearAllMocks();
+      
+      const result = await medicaidPlanning(marriedClientInfo, assets, income, expenses, medicalInfo, livingInfo, state);
       
       // Community spouse planning should be called for married clients
+      const communitySpousePlanningMock = require('../communitySpousePlanning').medicaidCommunitySpousePlanning;
       expect(communitySpousePlanningMock).toHaveBeenCalled();
-      expect(marriedResult.communitySpousePlan).toContain('Community Spouse Planning Approach');
+      
+      // For married clients, the community spouse planning should be included in the report
+      expect(result.communitySpousePlan).toBe('Community Spouse Planning Approach...');
     });
   });
   
@@ -338,7 +350,25 @@ describe('Medicaid Planning Integration Tests', () => {
     });
     
     test('should include content from each planning module', async () => {
-      const planningResult = await medicaidPlanning(clientInfo, assets, income, expenses, medicalInfo, livingInfo, state);
+      // Update validation to return married client for this test
+      require('../../validation/inputValidation').validateAllInputs.mockResolvedValueOnce({
+        valid: true,
+        message: 'All inputs are valid',
+        normalizedData: {
+          clientInfo: { ...clientInfo, maritalStatus: 'married' },
+          assets: assets,
+          income: income,
+          expenses: expenses,
+          medicalInfo: medicalInfo,
+          livingInfo: livingInfo,
+          state: state
+        }
+      });
+      
+      // Create a married client
+      const marriedClientInfo = { ...clientInfo, maritalStatus: 'married' };
+      
+      const planningResult = await medicaidPlanning(marriedClientInfo, assets, income, expenses, medicalInfo, livingInfo, state);
       
       const report = generateMedicaidPlanningReport(planningResult);
       

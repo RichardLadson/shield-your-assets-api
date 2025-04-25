@@ -7,6 +7,32 @@ const {
   divestmentPlanning
 } = require('../divestmentPlanning');
 
+// Mock medicaid rules
+jest.mock('../../utils/medicaidRulesLoader', () => ({
+  getMedicaidRules: jest.fn((state) => {
+    const mockRules = {
+      florida: {
+        lookbackPeriod: 60, // months
+        penaltyDivisor: 9901, // Average monthly cost of nursing home care
+        annualGiftExclusion: 18000,
+        exceptions: ['caregiver child', 'disabled child', 'sibling with equity interest']
+      },
+      california: {
+        lookbackPeriod: 30, // months
+        penaltyDivisor: 10933,
+        annualGiftExclusion: 18000,
+        exceptions: ['caregiver child', 'disabled child']
+      }
+    };
+    
+    if (mockRules[state]) {
+      return mockRules[state];
+    } else {
+      throw new Error(`No Medicaid rules found for state: ${state}`);
+    }
+  })
+}));
+
 describe('Divestment Planning Module', () => {
   // Basic client setup for tests
   const baseClientInfo = {
@@ -15,16 +41,27 @@ describe('Divestment Planning Module', () => {
     maritalStatus: 'single'
   };
 
+  // Create dates within lookback period
+  const currentDate = new Date();
+  const oneYearAgo = new Date(currentDate);
+  oneYearAgo.setFullYear(currentDate.getFullYear() - 1);
+  
+  const twoYearsAgo = new Date(currentDate);
+  twoYearsAgo.setFullYear(currentDate.getFullYear() - 2);
+  
+  const sixYearsAgo = new Date(currentDate);
+  sixYearsAgo.setFullYear(currentDate.getFullYear() - 6);
+
   const basePastTransfers = [
     {
-      date: '2023-01-15',
+      date: oneYearAgo.toISOString().split('T')[0],
       amount: 15000,
       recipient: 'child',
       purpose: 'gift',
       documentation: 'bank statement'
     },
     {
-      date: '2022-06-20',
+      date: twoYearsAgo.toISOString().split('T')[0],
       amount: 10000,
       recipient: 'grandchild',
       purpose: 'education',
@@ -33,35 +70,6 @@ describe('Divestment Planning Module', () => {
   ];
 
   const baseState = 'florida';
-
-  // Mock rules
-  const mockRules = {
-    florida: {
-      lookbackPeriod: 60, // months
-      penaltyDivisor: 9901, // Average monthly cost of nursing home care
-      annualGiftExclusion: 18000,
-      exceptions: ['caregiver child', 'disabled child', 'sibling with equity interest']
-    },
-    california: {
-      lookbackPeriod: 30, // months
-      penaltyDivisor: 10933,
-      annualGiftExclusion: 18000,
-      exceptions: ['caregiver child', 'disabled child']
-    }
-  };
-
-  // Mock the rules loader
-  jest.mock('../medicaidRulesLoader', () => ({
-    getMedicaidRules: jest.fn((state) => {
-      if (state === 'florida') {
-        return mockRules.florida;
-      } else if (state === 'california') {
-        return mockRules.california;
-      } else {
-        throw new Error(`Rules not found for state: ${state}`);
-      }
-    })
-  }));
 
   // Unit tests for analyzePastTransfers
   describe('analyzePastTransfers', () => {
@@ -78,7 +86,7 @@ describe('Divestment Planning Module', () => {
       const pastTransfers = [
         ...basePastTransfers,
         {
-          date: '2023-03-10',
+          date: oneYearAgo.toISOString().split('T')[0],
           amount: 20000,
           recipient: 'child',
           purpose: 'caregiver compensation',
@@ -99,7 +107,7 @@ describe('Divestment Planning Module', () => {
       const pastTransfers = [
         ...basePastTransfers,
         {
-          date: '2018-01-10', // More than 5 years ago
+          date: sixYearsAgo.toISOString().split('T')[0], // More than 5 years ago
           amount: 50000,
           recipient: 'child',
           purpose: 'gift',
@@ -117,7 +125,7 @@ describe('Divestment Planning Module', () => {
     test('should apply annual gift exclusions correctly', () => {
       const pastTransfers = [
         {
-          date: '2023-01-15',
+          date: oneYearAgo.toISOString().split('T')[0],
           amount: 15000,
           recipient: 'child',
           purpose: 'gift',
@@ -132,16 +140,19 @@ describe('Divestment Planning Module', () => {
     });
 
     test('should handle multiple transfers to the same recipient within a year', () => {
+      const sameYear = new Date(currentDate);
+      sameYear.setMonth(currentDate.getMonth() - 6);
+      
       const pastTransfers = [
         {
-          date: '2023-01-15',
+          date: currentDate.toISOString().split('T')[0],
           amount: 10000,
           recipient: 'child',
           purpose: 'gift',
           documentation: 'bank statement'
         },
         {
-          date: '2023-06-15',
+          date: sameYear.toISOString().split('T')[0], // Same year as above
           amount: 10000,
           recipient: 'child', // Same recipient in same year
           purpose: 'gift',
@@ -158,7 +169,7 @@ describe('Divestment Planning Module', () => {
     test('should identify documentation issues with transfers', () => {
       const pastTransfers = [
         {
-          date: '2023-01-15',
+          date: oneYearAgo.toISOString().split('T')[0],
           amount: 15000,
           recipient: 'child',
           purpose: 'gift'
@@ -272,8 +283,9 @@ describe('Divestment Planning Module', () => {
         totalAmount: 100000,
         exemptTransfers: [],
         transfersWithinLookback: [
-          { date: '2022-01-15', amount: 100000, recipient: 'child', purpose: 'gift' }
-        ]
+          { date: twoYearsAgo.toISOString().split('T')[0], amount: 100000, recipient: 'child', purpose: 'gift' }
+        ],
+        documentationIssues: []
       };
       
       const penaltyCalculation = {
@@ -294,7 +306,7 @@ describe('Divestment Planning Module', () => {
       expect(result.strategies.length).toBeGreaterThan(0);
       
       // Should include return of assets strategy for significant penalties
-      expect(result.strategies).toContain(expect.stringMatching(/return of assets/i));
+      expect(result.strategies.some(s => s.toLowerCase().includes('return of assets'))).toBe(true);
     });
 
     test('should recommend documentation improvements when needed', () => {
@@ -303,7 +315,7 @@ describe('Divestment Planning Module', () => {
         totalAmount: 30000,
         exemptTransfers: [],
         transfersWithinLookback: [
-          { date: '2022-01-15', amount: 30000, purpose: 'gift' } // Missing documentation
+          { date: twoYearsAgo.toISOString().split('T')[0], amount: 30000, purpose: 'gift' } // Missing documentation
         ],
         documentationIssues: [
           { transferIndex: 0, issue: 'Missing documentation' }
@@ -323,8 +335,8 @@ describe('Divestment Planning Module', () => {
         baseState
       );
       
-      expect(result.strategies).toContain(expect.stringMatching(/documentation/i));
-      expect(result.priorityActions).toContain(expect.stringMatching(/document/i));
+      expect(result.strategies.some(s => s.toLowerCase().includes('documentation'))).toBe(true);
+      expect(result.priorityActions.some(a => a.toLowerCase().includes('document'))).toBe(true);
     });
 
     test('should provide strategies to reclassify transfers when possible', () => {
@@ -334,13 +346,14 @@ describe('Divestment Planning Module', () => {
         exemptTransfers: [],
         transfersWithinLookback: [
           { 
-            date: '2022-01-15', 
+            date: twoYearsAgo.toISOString().split('T')[0], 
             amount: 20000, 
             recipient: 'child',
             purpose: 'gift',
             details: { recipientRelationship: 'child', childProvidedCare: true }
           }
-        ]
+        ],
+        documentationIssues: []
       };
       
       const penaltyCalculation = {
@@ -356,7 +369,7 @@ describe('Divestment Planning Module', () => {
       );
       
       // Should include caregiver exemption strategy
-      expect(result.strategies).toContain(expect.stringMatching(/caregiver/i));
+      expect(result.strategies.some(s => s.toLowerCase().includes('caregiver'))).toBe(true);
     });
 
     test('should provide minimal strategies for minimal penalties', () => {
@@ -365,8 +378,9 @@ describe('Divestment Planning Module', () => {
         totalAmount: 5000,
         exemptTransfers: [],
         transfersWithinLookback: [
-          { date: '2023-01-15', amount: 5000, recipient: 'child', purpose: 'gift' }
-        ]
+          { date: oneYearAgo.toISOString().split('T')[0], amount: 5000, recipient: 'child', purpose: 'gift' }
+        ],
+        documentationIssues: []
       };
       
       const penaltyCalculation = {
@@ -383,7 +397,7 @@ describe('Divestment Planning Module', () => {
       );
       
       // For minor penalties, may recommend accepting the penalty
-      expect(result.strategies).toContain(expect.stringMatching(/accept.*penalty/i));
+      expect(result.strategies.some(s => s.toLowerCase().includes('accept') && s.toLowerCase().includes('penalty'))).toBe(true);
     });
 
     test('should consider hardship waivers when applicable', () => {
@@ -392,8 +406,9 @@ describe('Divestment Planning Module', () => {
         totalAmount: 50000,
         exemptTransfers: [],
         transfersWithinLookback: [
-          { date: '2022-01-15', amount: 50000, recipient: 'child', purpose: 'gift' }
-        ]
+          { date: twoYearsAgo.toISOString().split('T')[0], amount: 50000, recipient: 'child', purpose: 'gift' }
+        ],
+        documentationIssues: []
       };
       
       const penaltyCalculation = {
@@ -418,7 +433,7 @@ describe('Divestment Planning Module', () => {
         baseState
       );
       
-      expect(result.strategies).toContain(expect.stringMatching(/hardship waiver/i));
+      expect(result.strategies.some(s => s.toLowerCase().includes('hardship waiver'))).toBe(true);
     });
 
     test('should provide no strategies when no penalty exists', () => {
@@ -426,7 +441,8 @@ describe('Divestment Planning Module', () => {
         nonExemptTotal: 0,
         totalAmount: 0,
         exemptTransfers: [],
-        transfersWithinLookback: []
+        transfersWithinLookback: [],
+        documentationIssues: []
       };
       
       const penaltyCalculation = {
@@ -441,7 +457,7 @@ describe('Divestment Planning Module', () => {
         baseState
       );
       
-      expect(result.strategies).toContain(expect.stringMatching(/no mitigation needed/i));
+      expect(result.strategies.some(s => s.toLowerCase().includes('no penalty mitigation needed'))).toBe(true);
     });
   });
 
@@ -470,13 +486,13 @@ describe('Divestment Planning Module', () => {
       
       expect(result.status).toBe('success');
       expect(result.penaltyCalculation.hasPenalty).toBe(false);
-      expect(result.strategies).toContain(expect.stringMatching(/no penalty/i));
+      expect(result.strategies.some(s => s.toLowerCase().includes('no penalty'))).toBe(true);
     });
 
     test('should handle exempt transfers properly', async () => {
       const pastTransfers = [
         {
-          date: '2023-03-10',
+          date: oneYearAgo.toISOString().split('T')[0],
           amount: 20000,
           recipient: 'child',
           purpose: 'caregiver compensation',
@@ -503,7 +519,7 @@ describe('Divestment Planning Module', () => {
       );
       
       expect(result.stateSpecificConsiderations).toBeDefined();
-      expect(result.stateSpecificConsiderations).toContain('california');
+      expect(result.stateSpecificConsiderations).toBe('california');
     });
 
     test('should handle errors gracefully', async () => {
@@ -533,14 +549,14 @@ describe('Divestment Planning Module', () => {
     test('should handle mixed exempt and non-exempt transfers', async () => {
       const pastTransfers = [
         {
-          date: '2023-01-15',
+          date: oneYearAgo.toISOString().split('T')[0],
           amount: 15000,
           recipient: 'child',
           purpose: 'gift',
           documentation: 'bank statement'
         },
         {
-          date: '2023-03-10',
+          date: oneYearAgo.toISOString().split('T')[0],
           amount: 20000,
           recipient: 'child',
           purpose: 'caregiver compensation',
@@ -573,7 +589,7 @@ describe('Divestment Planning Module', () => {
       
       const pastTransfers = [
         {
-          date: '2023-01-15',
+          date: oneYearAgo.toISOString().split('T')[0],
           amount: 50000,
           recipient: 'child',
           recipientName: 'Child 1',
@@ -589,7 +605,7 @@ describe('Divestment Planning Module', () => {
       );
       
       // Should suggest caregiver exemption strategy
-      expect(result.strategies).toContain(expect.stringMatching(/caregiver/i));
+      expect(result.strategies.some(s => s.toLowerCase().includes('caregiver'))).toBe(true);
     });
   });
 });
