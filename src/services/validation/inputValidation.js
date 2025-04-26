@@ -1,12 +1,12 @@
 // src/services/validation/inputValidation.js
 const Joi = require('joi');
 const logger = require('../../config/logger');
-const { normalizeState, getStateRules, loadMedicaidRules } = require('../utils/medicaidRulesLoader');
+const { normalizeStateKey, loadMedicaidRules } = require('../utils/medicaidRulesLoader');
 const { ValidationError, StateNotFoundError } = require('./validationErrors');
 
 // Client info validation schema
 const clientInfoSchema = Joi.object({
-  name: Joi.string().required().messages({
+  name: Joi.string().trim().required().messages({
     'any.required': 'Name is required',
     'string.empty': 'Name cannot be empty'
   }),
@@ -72,54 +72,46 @@ const homeInfoSchema = Joi.object({
 function validateClientInfo(clientInfo) {
   try {
     logger.debug('Validating client information');
-    
-    // Handle missing input
+
     if (!clientInfo) {
       throw new ValidationError('Client information is required');
     }
-    
-    // Convert field names to camelCase if they're not already
+
+    // Normalize field names to camelCase
     const normalizedClientInfo = {};
     for (const [key, value] of Object.entries(clientInfo)) {
       const camelKey = key.replace(/[-_\s](.)/g, (_, c) => c.toUpperCase());
       normalizedClientInfo[camelKey] = value;
     }
-    
-    // Convert marital status to lowercase if it exists
+
+    // Normalize specific fields
     if (normalizedClientInfo.maritalStatus) {
-      normalizedClientInfo.maritalStatus = normalizedClientInfo.maritalStatus.toLowerCase();
+      normalizedClientInfo.maritalStatus = normalizedClientInfo.maritalStatus.toLowerCase().trim();
     }
-    
-    // Convert health status to lowercase if it exists
     if (normalizedClientInfo.healthStatus) {
-      normalizedClientInfo.healthStatus = normalizedClientInfo.healthStatus.toLowerCase();
+      normalizedClientInfo.healthStatus = normalizedClientInfo.healthStatus.toLowerCase().trim();
     }
 
     // Validate with Joi
     const { error, value } = clientInfoSchema.validate(normalizedClientInfo, { abortEarly: false });
-    
     if (error) {
       const errorMessage = error.details.map(detail => detail.message).join('; ');
       logger.error(`Client info validation error: ${errorMessage}`);
       throw new ValidationError(`Invalid client info: ${errorMessage}`);
     }
-    
-    // Add warnings for unusual values
+
+    // Warn for unusual values
     if (value.age > 120) {
       logger.warn(`Client age ${value.age} seems unusually high, verify accuracy`);
     }
-    
-    // Check for consistency in spouse information
     const hasSpouseInfo = Object.keys(normalizedClientInfo).some(key => key.startsWith('spouse'));
     if (hasSpouseInfo && value.maritalStatus !== 'married') {
       logger.warn(`Client has spouse information but marital status is ${value.maritalStatus}`);
     }
-    
-    // Check for consistency in crisis planning
     if (normalizedClientInfo.isCrisis && value.healthStatus === 'good') {
       logger.warn('Client marked as crisis but health status is good, verify accuracy');
     }
-    
+
     return {
       valid: true,
       message: '',
@@ -133,7 +125,6 @@ function validateClientInfo(clientInfo) {
         normalizedData: null
       };
     }
-    
     logger.error(`Unexpected error validating client info: ${error.message}`);
     return {
       valid: false,
@@ -151,18 +142,15 @@ function validateClientInfo(clientInfo) {
 function validateAssets(assets) {
   try {
     logger.debug('Validating assets');
-    
-    // Handle missing input
+
     if (!assets) {
       throw new ValidationError('Assets are required');
     }
-    
-    // Normalize asset keys (convert to snake_case, lowercase)
+
+    // Normalize asset keys to snake_case
     const normalizedAssets = {};
     for (const [key, value] of Object.entries(assets)) {
       const normalizedKey = key.toLowerCase().replace(/\s+/g, '_');
-      
-      // Try to convert string values to numbers
       let normalizedValue = value;
       if (typeof value === 'string') {
         const numValue = parseFloat(value);
@@ -170,29 +158,26 @@ function validateAssets(assets) {
           normalizedValue = numValue;
         }
       }
-      
       normalizedAssets[normalizedKey] = normalizedValue;
     }
 
     // Validate with Joi
     const { error, value } = assetsSchema.validate(normalizedAssets, { abortEarly: false });
-    
     if (error) {
       const errorMessage = error.details.map(detail => detail.message).join('; ');
       logger.error(`Assets validation error: ${errorMessage}`);
       throw new ValidationError(`Invalid assets: ${errorMessage}`);
     }
-    
-    // Add warnings for unusually high values
+
+    // Warn for unusually high values
     const totalAssets = Object.values(value).reduce((sum, val) => sum + val, 0);
     if (totalAssets > 10000000) {
       logger.warn(`Total assets value (${totalAssets}) is unusually high, verify accuracy`);
     }
-    
     if (value.home && value.home > 5000000) {
       logger.warn(`Home value (${value.home}) is unusually high, verify accuracy`);
     }
-    
+
     return {
       valid: true,
       message: '',
@@ -206,7 +191,6 @@ function validateAssets(assets) {
         normalizedData: null
       };
     }
-    
     logger.error(`Unexpected error validating assets: ${error.message}`);
     return {
       valid: false,
@@ -224,18 +208,15 @@ function validateAssets(assets) {
 function validateIncome(income) {
   try {
     logger.debug('Validating income');
-    
-    // Handle missing input
+
     if (!income) {
       throw new ValidationError('Income is required');
     }
-    
-    // Normalize income keys (convert to snake_case, lowercase)
+
+    // Normalize income keys to snake_case
     const normalizedIncome = {};
     for (const [key, value] of Object.entries(income)) {
       const normalizedKey = key.toLowerCase().replace(/\s+/g, '_');
-      
-      // Try to convert string values to numbers
       let normalizedValue = value;
       if (typeof value === 'string') {
         const numValue = parseFloat(value);
@@ -243,29 +224,26 @@ function validateIncome(income) {
           normalizedValue = numValue;
         }
       }
-      
       normalizedIncome[normalizedKey] = normalizedValue;
     }
 
     // Validate with Joi
     const { error, value } = incomeSchema.validate(normalizedIncome, { abortEarly: false });
-    
     if (error) {
       const errorMessage = error.details.map(detail => detail.message).join('; ');
       logger.error(`Income validation error: ${errorMessage}`);
       throw new ValidationError(`Invalid income: ${errorMessage}`);
     }
-    
-    // Add warnings for unusually high values
+
+    // Warn for unusually high values
     const totalIncome = Object.values(value).reduce((sum, val) => sum + val, 0);
     if (totalIncome > 50000) {
       logger.warn(`Total monthly income (${totalIncome}) is unusually high, verify accuracy`);
     }
-    
     if (value.social_security && value.social_security > 4000) {
       logger.warn(`Social Security income (${value.social_security}) is unusually high, verify accuracy`);
     }
-    
+
     return {
       valid: true,
       message: '',
@@ -279,7 +257,6 @@ function validateIncome(income) {
         normalizedData: null
       };
     }
-    
     logger.error(`Unexpected error validating income: ${error.message}`);
     return {
       valid: false,
@@ -297,22 +274,20 @@ function validateIncome(income) {
 function validateExpenses(expenses) {
   try {
     logger.debug('Validating expenses');
-    
+
     // Handle missing or empty input (expenses can be empty)
-    if (!expenses) {
+    if (!expenses || Object.keys(expenses).length === 0) {
       return {
         valid: true,
         message: '',
         normalizedData: {}
       };
     }
-    
-    // Normalize expense keys (convert to snake_case, lowercase)
+
+    // Normalize expense keys to snake_case
     const normalizedExpenses = {};
     for (const [key, value] of Object.entries(expenses)) {
       const normalizedKey = key.toLowerCase().replace(/\s+/g, '_');
-      
-      // Try to convert string values to numbers
       let normalizedValue = value;
       if (typeof value === 'string') {
         const numValue = parseFloat(value);
@@ -320,27 +295,25 @@ function validateExpenses(expenses) {
           normalizedValue = numValue;
         }
       }
-      
       normalizedExpenses[normalizedKey] = normalizedValue;
     }
 
     // Validate with Joi
     const { error, value } = expensesSchema.validate(normalizedExpenses, { abortEarly: false });
-    
     if (error) {
       const errorMessage = error.details.map(detail => detail.message).join('; ');
       logger.error(`Expenses validation error: ${errorMessage}`);
       throw new ValidationError(`Invalid expenses: ${errorMessage}`);
     }
-    
-    // Add warnings for unusually high values
+
+    // Warn for unusually high values
     if (Object.keys(value).length > 0) {
       const totalExpenses = Object.values(value).reduce((sum, val) => sum + val, 0);
       if (totalExpenses > 50000) {
         logger.warn(`Total monthly expenses (${totalExpenses}) is unusually high, verify accuracy`);
       }
     }
-    
+
     return {
       valid: true,
       message: '',
@@ -354,7 +327,6 @@ function validateExpenses(expenses) {
         normalizedData: null
       };
     }
-    
     logger.error(`Unexpected error validating expenses: ${error.message}`);
     return {
       valid: false,
@@ -372,7 +344,7 @@ function validateExpenses(expenses) {
 function validateHomeInfo(homeInfo) {
   try {
     logger.debug('Validating home information');
-    
+
     // Handle missing input (home info can be null)
     if (!homeInfo) {
       return {
@@ -381,7 +353,7 @@ function validateHomeInfo(homeInfo) {
         normalizedData: null
       };
     }
-    
+
     // Normalize home info
     const normalizedHomeInfo = {
       value: parseFloat(homeInfo.value) || 0,
@@ -390,18 +362,17 @@ function validateHomeInfo(homeInfo) {
 
     // Validate with Joi
     const { error, value } = homeInfoSchema.validate(normalizedHomeInfo, { abortEarly: false });
-    
     if (error) {
       const errorMessage = error.details.map(detail => detail.message).join('; ');
       logger.error(`Home info validation error: ${errorMessage}`);
       throw new ValidationError(`Invalid home info: ${errorMessage}`);
     }
-    
-    // Add warnings for unusually high values
+
+    // Warn for unusually high values
     if (value.value > 5000000) {
       logger.warn(`Home value (${value.value}) is unusually high, verify accuracy`);
     }
-    
+
     return {
       valid: true,
       message: '',
@@ -415,7 +386,6 @@ function validateHomeInfo(homeInfo) {
         normalizedData: null
       };
     }
-    
     logger.error(`Unexpected error validating home info: ${error.message}`);
     return {
       valid: false,
@@ -426,55 +396,40 @@ function validateHomeInfo(homeInfo) {
 }
 
 /**
- * Validate state against rules data
- * @param {string} state - State to validate
- * @param {Object} rulesData - Rules data (optional)
- * @returns {Object} - Validation result with normalized state
+ * Validate state against Medicaid rules
+ * @param {string} state - State name or abbreviation
+ * @returns {Promise<Object>} - Validation result with normalized state
  */
-async function validateState(state, rulesData = null) {
+async function validateState(state) {
   try {
     logger.debug(`Validating state: ${state}`);
-    
-    // Handle missing input
-    if (!state) {
-      throw new ValidationError('State is required');
+
+    if (!state || typeof state !== 'string') {
+      throw new ValidationError('State is required and must be a string');
     }
-    
-    try {
-      // Try to normalize state
-      const normalizedState = normalizeState(state);
-      
-      // Load rules if not provided
-      if (!rulesData) {
-        rulesData = await loadMedicaidRules();
-      }
-      
-      // Check if state exists in rules
-      if (!rulesData[normalizedState]) {
-        throw new StateNotFoundError(`No rules found for state: ${state}`);
-      }
-      
-      return {
-        valid: true,
-        message: '',
-        normalizedData: normalizedState
-      };
-    } catch (error) {
-      if (error instanceof StateNotFoundError) {
-        logger.error(`State not found: ${state}`);
-        throw new ValidationError(`State not found: ${state}`);
-      }
-      throw error;
-    }
+
+    // Normalize the state
+    const normalizedState = normalizeStateKey(state.trim());
+    logger.debug(`Normalized state: ${normalizedState}`);
+
+    // Load Medicaid rules for the normalized state
+    const rulesData = await loadMedicaidRules(normalizedState);
+    logger.debug(`Rules loaded for state: ${normalizedState}`);
+
+    return {
+      valid: true,
+      message: '',
+      normalizedData: normalizedState
+    };
   } catch (error) {
-    if (error instanceof ValidationError) {
+    if (error.message.includes('Rules not found')) {
+      logger.error(`State not found: ${state}`);
       return {
         valid: false,
-        message: error.message,
+        message: `State not found: ${state}`,
         normalizedData: null
       };
     }
-    
     logger.error(`Unexpected error validating state: ${error.message}`);
     return {
       valid: false,
@@ -497,46 +452,45 @@ async function validateState(state, rulesData = null) {
 async function validateAllInputs(clientInfo, assets, income, expenses, homeInfo, state) {
   try {
     logger.info('Starting validation of all inputs');
-    
+
     // Validate client info
     const clientResult = validateClientInfo(clientInfo);
     if (!clientResult.valid) {
       return clientResult;
     }
-    
+
     // Validate assets
     const assetsResult = validateAssets(assets);
     if (!assetsResult.valid) {
       return assetsResult;
     }
-    
+
     // Validate income
     const incomeResult = validateIncome(income);
     if (!incomeResult.valid) {
       return incomeResult;
     }
-    
+
     // Validate expenses
     const expensesResult = validateExpenses(expenses);
     if (!expensesResult.valid) {
       return expensesResult;
     }
-    
+
     // Validate home info
     const homeInfoResult = validateHomeInfo(homeInfo);
     if (!homeInfoResult.valid) {
       return homeInfoResult;
     }
-    
-    // Validate state against rules data
+
+    // Validate state
     const stateResult = await validateState(state);
     if (!stateResult.valid) {
       return stateResult;
     }
-    
+
     logger.info('All inputs validated successfully');
-    
-    // Return all normalized data
+
     return {
       valid: true,
       message: 'All inputs are valid',

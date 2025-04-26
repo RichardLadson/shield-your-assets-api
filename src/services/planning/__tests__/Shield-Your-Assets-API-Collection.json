@@ -1,0 +1,75 @@
+{
+    "info": {
+      "name": "Shield Your Assets API - Testing",
+      "_postman_id": "your-random-id-here",
+      "description": "Test suite for Shield Your Assets API",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+      {
+        "name": "Get State Medicaid Rules (Alabama)",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:3001/api/eligibility/rules/alabama",
+            "protocol": "http",
+            "host": ["localhost"],
+            "port": "3001",
+            "path": ["api", "eligibility", "rules", "alabama"]
+          }
+        }
+      },
+      {
+        "name": "Assess Medicaid Eligibility",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "name": "Content-Type",
+              "value": "application/json",
+              "type": "text"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"assets\": { \"countable\": 1000 },\n  \"income\": { \"social_security\": 900, \"pension\": 0, \"other\": 0 },\n  \"maritalStatus\": \"single\",\n  \"state\": \"alabama\",\n  \"age\": 65,\n  \"healthStatus\": \"good\",\n  \"isCrisis\": false\n}"
+          },
+          "url": {
+            "raw": "http://localhost:3001/api/eligibility/assess",
+            "protocol": "http",
+            "host": ["localhost"],
+            "port": "3001",
+            "path": ["api", "eligibility", "assess"]
+          }
+        }
+      },
+      {
+        "name": "Comprehensive Medicaid Planning",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "name": "Content-Type",
+              "value": "application/json",
+              "type": "text"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"assets\": { \"countable\": 10000 },\n  \"income\": { \"social_security\": 1200, \"pension\": 500, \"other\": 0 },\n  \"state\": \"florida\",\n  \"maritalStatus\": \"married\",\n  \"healthStatus\": \"average\",\n  \"isCrisis\": false\n}"
+          },
+          "url": {
+            "raw": "http://localhost:3001/api/planning/comprehensive",
+            "protocol": "http",
+            "host": ["localhost"],
+            "port": "3001",
+            "path": ["api", "planning", "comprehensive"]
+          }
+        }
+      }
+    ]
+  }
+  

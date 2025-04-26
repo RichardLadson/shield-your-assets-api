@@ -1,4 +1,5 @@
 // src/services/planning/medicaidPlanning.js
+// import logger, input validation, and the medicaid Rules Loader
 const logger = require('../../config/logger');
 const { validateAllInputs } = require('../validation/inputValidation');
 const { loadMedicaidRules } = require('../utils/medicaidRulesLoader');
@@ -6,7 +7,7 @@ const { loadMedicaidRules } = require('../utils/medicaidRulesLoader');
 // Import all the planning modules in their logical sequence
 const { medicaidCarePlanning } = require('./carePlanning');
 const { medicaidEligibilityAssessment } = require('./eligibilityAssessment');
-const { medicaidRelatedBenefitsPlanning } = require('./relatedBenefits');
+const { medicaidRelatedBenefitsPlanning} = require('./relatedBenefits');
 const { medicaidAssetPlanning } = require('./assetPlanning');
 const { medicaidIncomePlanning } = require('./incomePlanning');
 const { medicaidTrustPlanning } = require('./trustPlanning');
@@ -59,7 +60,7 @@ async function medicaidPlanning(clientInfo, assets, income, expenses, medicalInf
     const maritalStatus = normalizedClientInfo.maritalStatus || 'single';
     
     // Load Medicaid rules data
-    const rulesData = await loadMedicaidRules();
+    const rulesData = await loadMedicaidRules(normalizedState);
     
     // Step 1: Care Planning
     const carePlanningResult = await medicaidCarePlanning(

@@ -344,7 +344,7 @@ function determineTrustFunding(trustOptions, clientInfo, assets, income, state) 
  * @param {string} state - State of application
  * @returns {Promise<Object>} Complete trust planning result
  */
-async function trustPlanning(clientInfo, assets, income, eligibilityResults, state) {
+async function medicaidTrustPlanning(clientInfo, assets, income, eligibilityResults, state) {
   logger.info(`Starting trust planning process for ${state}`);
   
   try {
@@ -432,5 +432,5 @@ module.exports = {
   assessTrustNeeds,
   evaluateTrustOptions,
   determineTrustFunding,
-  trustPlanning
+  medicaidTrustPlanning
 };

@@ -277,7 +277,7 @@ function developMitigationStrategies(analysis, penaltyCalc, clientInfo = {}, sta
 /**
  * Full divestment planning workflow
  */
-async function divestmentPlanning(clientInfo, pastTransfers, state) {
+async function medicaidDivestmentPlanning(clientInfo, pastTransfers, state) {
   logger.info(`Starting comprehensive divestment planning for ${state}`);
   try {
     const transferAnalysis = analyzePastTransfers(pastTransfers || [], state);
@@ -313,5 +313,5 @@ module.exports = {
   analyzePastTransfers,
   calculatePenaltyPeriod,
   developMitigationStrategies,
-  divestmentPlanning
+  medicaidDivestmentPlanning
 };

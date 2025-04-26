@@ -1,6 +1,6 @@
 // src/controllers/eligibilityController.js
-const { assessMedicaidEligibility } = require('../services/eligibility/eligibilityAssessment');
-const { getStateRules } = require('../services/utils/medicaidRulesLoader');
+const { assessMedicaidEligibility } = require('../services/planning/eligibilityAssessment');
+const { getMedicaidRules } = require('../services/utils/medicaidRulesLoader');
 const logger = require('../config/logger');
 
 /**
@@ -14,7 +14,6 @@ async function assessEligibility(req, res) {
     
     const { assets, income, maritalStatus, state, age, healthStatus, isCrisis } = req.body;
     
-    // Validate required fields
     if (!assets || !income || !maritalStatus || !state || !age) {
       logger.error('Missing required fields in eligibility assessment request');
       return res.status(400).json({
@@ -23,12 +22,10 @@ async function assessEligibility(req, res) {
       });
     }
     
-    // Process assessment
     const result = await assessMedicaidEligibility(
       assets, income, maritalStatus, state, age, healthStatus, isCrisis
     );
     
-    // Return assessment results
     if (result.status === 'error') {
       logger.error(`Error in assessment: ${result.error}`);
       return res.status(400).json(result);
@@ -63,8 +60,7 @@ async function getStateMedicaidRules(req, res) {
       });
     }
     
-    // Get rules for the specified state
-    const rules = await getStateRules(state);
+    const rules = await getMedicaidRules(state);
     
     logger.info(`Successfully retrieved rules for ${state}`);
     return res.status(200).json({

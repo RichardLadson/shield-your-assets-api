@@ -223,7 +223,7 @@ function developApplicationStrategies(
 /**
  * Complete application planning workflow.
  */
-async function applicationPlanning(
+async function medicaidApplicationPlanning(
   clientInfo,
   assets,
   income,
@@ -307,5 +307,4 @@ module.exports = {
   prepareApplicationTimeline,
   identifyRequiredDocuments,
   developApplicationStrategies,
-  applicationPlanning
-};
+  medicaidApplicationPlanning};

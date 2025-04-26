@@ -307,7 +307,7 @@ function developAnnuityRecommendations(options, parameters, clientInfo, assets, 
  * @param {Object} options - Configuration options for analysis
  * @returns {Promise<Object>} Annuity planning analysis and recommendations
  */
-async function annuityPlanning(clientInfo, assets, income, eligibilityStatus, state) {
+async function medicaidAnnuityPlanning(clientInfo, assets, income, eligibilityStatus, state) {
   logger.info(`Starting annuity planning for client in ${clientInfo}`);
   
   try {
@@ -823,7 +823,7 @@ function getAlternatives(clientInfo, excessAssets) {
   }
   
   module.exports = {
-    annuityPlanning,
+    medicaidAnnuityPlanning,
     assessAnnuityOptions,
     calculateAnnuityParameters,
     developAnnuityRecommendations,

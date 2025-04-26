@@ -181,7 +181,7 @@ function developEstateRecoveryPlan(riskAssessment, clientInfo, assets, state) {
   };
 }
 
-async function estateRecoveryPlanning(clientInfo, assets, state) {
+async function medicaidEstateRecoveryPlanning(clientInfo, assets, state) {
   logger.info(`Starting estate recovery planning process for ${state}`);
   
   try {
@@ -224,5 +224,4 @@ async function estateRecoveryPlanning(clientInfo, assets, state) {
 module.exports = {
   assessEstateRecoveryRisk,
   developEstateRecoveryPlan,
-  estateRecoveryPlanning
-};
+  medicaidEstateRecoveryPlanning};

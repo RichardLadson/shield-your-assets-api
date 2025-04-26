@@ -7,13 +7,12 @@ const eligibilityController = require('../controllers/eligibilityController');
 router.post('/assess', eligibilityController.assessEligibility);
 
 // GET route for state-specific rules
-router.get('/rules/:state', eligibilityController.getStateRules);
+router.get('/rules/:state', eligibilityController.getStateMedicaidRules);
 
 module.exports = router;
 
 // src/routes/planningRoutes.js
-const express = require('express');
-const router = express.Router();
+
 const planningController = require('../controllers/planningController');
 
 // POST route for comprehensive planning
@@ -28,8 +27,7 @@ router.post('/trust', planningController.trustPlanning);
 module.exports = router;
 
 // src/routes/reportRoutes.js
-const express = require('express');
-const router = express.Router();
+
 const reportController = require('../controllers/reportController');
 
 // POST route for generating reports

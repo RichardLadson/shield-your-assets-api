@@ -1,3 +1,4 @@
+const fs = require('fs');
 const logger = require('../../config/logger');
 const medicaidRules = require('../../data/medicaid_rules_2025.json');
 
@@ -8,12 +9,10 @@ const medicaidRules = require('../../data/medicaid_rules_2025.json');
  * @returns {Promise<Object>} State-specific Medicaid rules
  */
 async function loadMedicaidRules(state) {
-  logger.debug(`Loading Medicaid rules for state: ${state}`);
-  
   if (!state) {
     throw new Error('State must be provided to load Medicaid rules');
   }
-
+  
   const stateKey = normalizeStateKey(state);
   
   if (!medicaidRules[stateKey]) {
@@ -259,5 +258,6 @@ module.exports = {
   loadRuleUpdates,
   getHomeEquityLimit,
   getIncomeTrustRequirements,
-  getDisregardRules
+  getDisregardRules,
+  normalizeStateKey
 };

@@ -293,7 +293,7 @@ function developBenefitApplicationStrategies(eligibilityResults, clientInfo, sta
  * @param {string} state - State of residence
  * @returns {Promise<Object>} Complete benefits planning result
  */
-async function relatedBenefitsPlanning(clientInfo, assets, income, expenses, medicalInfo, state) {
+async function medicaidRelatedBenefitsPlanning(clientInfo, assets, income, expenses, medicalInfo, state) {
   logger.info(`Starting related benefits planning for ${state}`);
   
   try {
@@ -488,5 +488,5 @@ module.exports = {
   identifyRelatedBenefits,
   evaluateBenefitEligibility,
   developBenefitApplicationStrategies,
-  relatedBenefitsPlanning
+  medicaidRelatedBenefitsPlanning
 };
