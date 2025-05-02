@@ -13,6 +13,9 @@ const inputValidation = require('../validation/inputValidation');
  * @returns {Promise<Object>} Asset assessment results
  */
 async function assessAssetSituation(assets, state, maritalStatus, rulesData) {
+  if (!state) {
+    throw new Error('State must be provided to assess asset situation');
+  }
   const stateUpper = state.toUpperCase();
   logger.debug(`Assessing asset situation for ${stateUpper}, marital status: ${maritalStatus}`);
   
@@ -21,8 +24,8 @@ async function assessAssetSituation(assets, state, maritalStatus, rulesData) {
     const { countableAssets, nonCountableAssets } = eligibilityUtils.classifyAssets(assets);
     
     // Load rules or use provided rulesData
-    const rules = rulesData || await medicaidRulesLoader.loadMedicaidRules();
-    const stateKey = stateUpper.toLowerCase();
+    const rules = rulesData || await medicaidRulesLoader.loadMedicaidRules(state); // Pass state
+    const stateKey = state.toLowerCase();
     const stateRules = rules[stateKey] || {};
     const resourceLimit = maritalStatus === 'married'
       ? (stateRules.assetLimitMarried || 3000)
@@ -179,27 +182,73 @@ function planAssetApproach(strategies, situation) {
 }
 
 /**
- * Complete asset planning workflow
+ * Complete asset planning workflow - updated with additional validation and debugging
+ * This is the main function that handles asset planning for Medicaid
  * 
  * @param {Object} clientInfo - Client demographic information
  * @param {Object} assets - Client's assets
+ * @param {Object} income - Client's income (optional)
+ * @param {Object} expenses - Client's expenses (optional)
+ * @param {Object} homeInfo - Home information (optional)
  * @param {string} state - State of application
  * @returns {Promise<Object>} Complete asset planning result
  */
-async function assetPlanning(clientInfo, assets, state) {
-  logger.info(`Starting asset planning for ${state}`);
-  
+async function assetPlanning(clientInfo, assets, income, expenses, homeInfo, state) {
   try {
+    // Log inputs for debugging
+    logger.info(`Starting asset planning for client in ${state}`);
+    logger.debug(`Client info received: ${JSON.stringify(clientInfo)}`);
+    logger.debug(`Assets received: ${JSON.stringify(assets)}`);
+    
+    // Ensure basic required parameters exist before validation
+    if (!clientInfo) {
+      logger.error('Client info is missing');
+      return { status: 'error', error: 'Client information is required' };
+    }
+    
+    if (!assets) {
+      logger.error('Assets are missing');
+      return { status: 'error', error: 'Asset information is required' };
+    }
+    
+    if (!state) {
+      logger.error('State is missing');
+      return { status: 'error', error: 'State information is required' };
+    }
+    
+    // Add additional check for client info required fields
+    if (!clientInfo.name || !clientInfo.age || !clientInfo.maritalStatus) {
+      logger.error('Client info missing required fields');
+      return { 
+        status: 'error', 
+        error: 'Invalid client info: Client name, age, and marital status are required' 
+      };
+    }
+    
     // Validate inputs
-    const validation = await inputValidation.validateAllInputs({ clientInfo, assets, state });
+    const validation = await inputValidation.validateAllInputs(clientInfo, assets, income, expenses, homeInfo, state);
+    
     if (!validation.valid) {
       logger.error(`Validation failed: ${validation.message}`);
       return { status: 'error', error: validation.message };
     }
     
+    // Log normalized data for debugging
+    logger.debug(`Validated client info: ${JSON.stringify(validation.normalizedData.clientInfo)}`);
+    
     // Use normalized data
     const { clientInfo: validatedClientInfo, assets: validatedAssets, state: validatedState } = validation.normalizedData;
-    const maritalStatus = validatedClientInfo.maritalStatus || 'single';
+    
+    // Double-check that validatedClientInfo exists and has required fields
+    if (!validatedClientInfo || !validatedClientInfo.name || !validatedClientInfo.age || !validatedClientInfo.maritalStatus) {
+      logger.error('Required fields missing in validated client info');
+      return { 
+        status: 'error', 
+        error: 'Required client information is missing after validation' 
+      };
+    }
+    
+    const maritalStatus = validatedClientInfo.maritalStatus;
     
     // Run asset situation assessment
     const situation = await assessAssetSituation(
@@ -239,6 +288,21 @@ async function assetPlanning(clientInfo, assets, state) {
 }
 
 /**
+ * Medicaid asset planning entry point that matches controller's expected interface
+ * 
+ * @param {Object} clientInfo - Client demographic information
+ * @param {Object} assets - Client's assets
+ * @param {Object} income - Client's income (optional)
+ * @param {Object} expenses - Client's expenses (optional)
+ * @param {Object} homeInfo - Home information (optional)
+ * @param {string} state - State of application
+ * @returns {Promise<Object>} Complete asset planning result
+ */
+async function medicaidAssetPlanning(clientInfo, assets, income, expenses, homeInfo, state) {
+  return await assetPlanning(clientInfo, assets, income, expenses, homeInfo, state);
+}
+
+/**
  * Additional function for assessing assets
  * 
  * @param {string} state - State abbreviation
@@ -258,6 +322,6 @@ module.exports = {
   assessHomeEquity,
   determineAssetStrategies,
   planAssetApproach,
-  medicaidAssetPlanning: assetPlanning,
+  medicaidAssetPlanning,
   assessAssets
 };

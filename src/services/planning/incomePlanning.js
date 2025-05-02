@@ -12,14 +12,12 @@ const eligibilityUtils = require('../utils/eligibilityUtils');
  * @returns {Promise<Object>} Income assessment results
  */
 async function assessIncomeSituation(clientInfo, income, state, rules) {
-  // More robust check for state - ensure it's a string before calling toUpperCase
   const stateUpper = (typeof state === 'string') ? state.toUpperCase() : 'UNKNOWN';
   const maritalStatus = clientInfo?.maritalStatus || 'single';
   
   logger.debug(`Assessing income situation for ${stateUpper}, marital status: ${maritalStatus}`);
   
   try {
-    // Calculate total income - handle the case where income is a number or an object
     let totalIncome = 0;
     if (typeof income === 'number') {
       totalIncome = income;
@@ -27,23 +25,17 @@ async function assessIncomeSituation(clientInfo, income, state, rules) {
       totalIncome = Object.values(income).reduce((sum, val) => sum + (typeof val === 'number' ? val : 0), 0);
     }
     
-    // Get state-specific rules
     const stateKey = stateUpper.toLowerCase();
     const stateRules = rules && rules[stateKey] ? rules[stateKey] : {};
     
-    // Get income limit based on marital status
     let incomeLimit = maritalStatus === 'married' 
       ? (stateRules.incomeLimitMarried || 5802)
       : (stateRules.incomeLimitSingle || 2901);
     
-    // Determine if income exceeds limit
     const exceedsLimit = totalIncome > incomeLimit;
     
-    // Check if state is an income cap state - in real implementation, would be defined by state policy
-    // Florida is a known income cap state
     const isIncomeCapState = stateKey === 'florida' || (stateRules.hasIncomeTrust === true);
     
-    // Get income trust info if needed
     const incomeTrustInfo = exceedsLimit && isIncomeCapState ? {
       name: stateRules.incomeTrustName || 'Miller Trust',
       requirements: stateRules.incomeTrustRequirements || [],
@@ -60,7 +52,8 @@ async function assessIncomeSituation(clientInfo, income, state, rules) {
       isIncomeCapState,
       overIncomeLimit: exceedsLimit,
       maritalStatus,
-      incomeSources: income
+      incomeSources: income,
+      spouseIncome: clientInfo?.spouseIncome || 0
     };
   } catch (error) {
     logger.error(`Error assessing income situation: ${error.message}`);
@@ -75,7 +68,6 @@ async function assessIncomeSituation(clientInfo, income, state, rules) {
  * @returns {Promise<Object>} Income trust requirements
  */
 async function getIncomeTrustInfo(state) {
-  // Add null/undefined check
   if (!state || typeof state !== 'string') {
     return {
       available: false,
@@ -86,18 +78,14 @@ async function getIncomeTrustInfo(state) {
   logger.debug(`Getting income trust info for ${state}`);
   
   try {
-    // Get state rules
     const rulesData = await medicaidRulesLoader.loadMedicaidRules();
-    const stateKey = state.toLowerCase(); // Normalize to lowercase for lookup
+    const stateKey = state.toLowerCase();
     const rules = rulesData[stateKey];
     
     if (!rules) {
       throw new Error(`No Medicaid rules found for state: ${state}`);
     }
     
-    // Determine if state has income trusts (Miller Trusts)
-    // In a real implementation, this would come from the rules data
-    // For now, we'll consider Florida as a known income cap state
     const hasIncomeTrust = stateKey === 'florida' || rules.hasIncomeTrust === true;
     
     return {
@@ -128,53 +116,41 @@ async function calculateShareOfCost(incomeSituation, expenses, state, rules) {
   logger.debug(`Calculating share of cost for ${state}`);
   
   try {
-    // Extract state-specific rules
     const stateKey = state?.toLowerCase();
     const stateRules = rules && rules[stateKey] ? rules[stateKey] : {};
     
-    // Default personal needs allowance (from state rules or default)
     const personalNeedsAllowance = stateRules.monthlyPersonalNeedsAllowance || 160;
-    
-    // Initialize deductions object
     const deductions = {
-      personalNeedsAllowance: personalNeedsAllowance,
+      personalNeedsAllowance,
       healthInsurancePremiums: 0,
       medicalExpenses: 0,
       housingMaintenance: 0
     };
     
-    // Add health insurance premiums if provided
     if (expenses && expenses.health_insurance) {
       deductions.healthInsurancePremiums = expenses.health_insurance;
     }
     
-    // Add uncovered medical expenses if provided
-    if (expenses && expenses.medicalExpenses) {
-      deductions.medicalExpenses = expenses.medicalExpenses;
+    if (expenses && expenses.medical) {
+      deductions.medicalExpenses = expenses.medical;
     }
     
-    // Add housing maintenance if provided (capped at stateRules.housingMaintenanceLimit or $200)
     if (expenses && expenses.housing) {
       const housingCap = stateRules.housingMaintenanceLimit || 200;
       deductions.housingMaintenance = Math.min(expenses.housing, housingCap);
     }
     
-    // Add spousal allowance if married
     if (incomeSituation.maritalStatus === 'married' && !incomeSituation.spouseInFacility) {
-      // Calculate spousal allowance based on the MMNA (Minimum Monthly Needs Allowance)
-      // In a real scenario, this would involve a complex calculation based on spouse's income
-      // For now, use the state's minimum MMNA or a default
-      const spouseIncome = incomeSituation.spouseIncome || 1000; // Default assumption
+      const spouseIncome = incomeSituation.spouseIncome || expenses?.spouseIncome || 0;
+      if (spouseIncome === 0 && incomeSituation.maritalStatus === 'married') {
+        logger.warn(`No spouse income provided for married client in ${stateKey}; defaulting to 0`);
+      }
       const mmna = stateRules.monthlyMaintenanceNeedsAllowanceMin || 2555;
       const spousalAllowance = Math.max(0, mmna - spouseIncome);
-      
       deductions.spousalAllowance = spousalAllowance;
     }
     
-    // Calculate total deductions
     const totalDeductions = Object.values(deductions).reduce((sum, val) => sum + val, 0);
-    
-    // Calculate share of cost (SOC)
     const shareOfCost = Math.max(0, incomeSituation.totalIncome - totalDeductions);
     
     return {
@@ -201,23 +177,19 @@ function determineIncomeStrategies(incomeSituation, shareOfCost) {
   
   const strategies = [];
   
-  // Add basic strategies
   strategies.push('Document all income sources with verification');
   strategies.push('Report any changes in income promptly');
   
-  // Income cap state with excess income
   if (incomeSituation.isIncomeCapState && incomeSituation.exceedsLimit) {
     strategies.push('Consider Qualified Income Trust (Miller Trust)');
     strategies.push('Set up dedicated trust account for excess income');
   }
   
-  // Non-income cap state with excess income
   if (!incomeSituation.isIncomeCapState && incomeSituation.exceedsLimit) {
     strategies.push('Plan for income spend-down on allowable expenses');
     strategies.push('Track and document all qualifying expenses');
   }
   
-  // Share of cost strategies
   if (shareOfCost > 1500) {
     strategies.push('Explore ways to increase allowable deductions');
     strategies.push('Consider increasing health insurance premiums');
@@ -226,7 +198,6 @@ function determineIncomeStrategies(incomeSituation, shareOfCost) {
     strategies.push('Review spend-down opportunities, such as pre-paid funeral or home modifications');
   }
   
-  // Married-specific strategies
   if (incomeSituation.maritalStatus === 'married') {
     strategies.push('Analyze spousal income allowance');
     strategies.push('Optimize income allocation between spouses');
@@ -253,25 +224,19 @@ function planIncomeApproach(strategies, incomeSituation, shareOfCost) {
   
   let approach = "Income Eligibility and Share of Cost Planning Approach:\n\n";
   
-  // Basic information
   approach += `Total Income: $${incomeSituation.totalIncome.toFixed(2)}\n`;
   approach += `Income Limit: $${incomeSituation.incomeLimit.toFixed(2)}\n`;
   approach += `Exceeds Limit: ${incomeSituation.exceedsLimit ? 'Yes' : 'No'}\n`;
   approach += `Calculated Share of Cost: $${shareOfCost.toFixed(2)}\n`;
-  
-  // Add state
   approach += `State: ${incomeSituation.state.toLowerCase()}\n`;
   
-  // Calculate excess income if applicable
   if (incomeSituation.exceedsLimit) {
     const excessAmount = incomeSituation.totalIncome - incomeSituation.incomeLimit;
     approach += `Excess Income: $${excessAmount.toFixed(2)}\n`;
   }
   
-  // Add income cap state information if applicable
   if (incomeSituation.isIncomeCapState) {
     approach += "\nThis is an income cap state. ";
-    
     if (incomeSituation.exceedsLimit) {
       approach += `A Qualified Income Trust (Miller Trust) will be required since income exceeds the limit.\n`;
     } else {
@@ -279,16 +244,13 @@ function planIncomeApproach(strategies, incomeSituation, shareOfCost) {
     }
   }
   
-  // Add strategy recommendations
   approach += "\nRecommended Strategies:\n\n";
-  
   strategies.forEach(strategy => {
     approach += `- ${strategy}\n`;
   });
   
   approach += "\nReview all possible deductions\n";
   
-  // Add specific guidance based on situation
   if (incomeSituation.exceedsLimit) {
     if (incomeSituation.isIncomeCapState) {
       approach += "\nQIT Implementation Steps:\n";
@@ -303,14 +265,11 @@ function planIncomeApproach(strategies, incomeSituation, shareOfCost) {
       approach += "- Submit expense verification with Medicaid application\n";
     }
   } else {
-    // Still include basic spend-down information for reference
     approach += "\nIncome Management Steps:\n";
-    // Fixed typo from previous version
     approach += "- Develop a plan to spend down excess income on allowable expenses\n";
     approach += "- Monitor income changes that could affect eligibility\n";
   }
   
-  // Add spousal allowance guidance for married clients
   if (incomeSituation.maritalStatus === 'married') {
     approach += "\nSpousal Income Considerations:\n";
     approach += "- Calculate and optimize spousal income allowance\n";
@@ -341,7 +300,6 @@ async function developIncomeStrategies(assessment, clientInfo) {
     const strategies = [];
     const implementationSteps = [];
     
-    // If income exceeds limit, recommend appropriate strategies
     if (assessment.exceedsLimit) {
       if (assessment.needsIncomeTrust) {
         strategies.push(`Establish ${assessment.incomeTrustInfo?.name || 'Miller Trust'} (QIT)`);
@@ -358,7 +316,6 @@ async function developIncomeStrategies(assessment, clientInfo) {
       implementationSteps.push('Monitor and report any income changes promptly');
     }
     
-    // Add special considerations based on client info
     if (clientInfo?.age < 65 && clientInfo?.disabled) {
       strategies.push('Evaluate ABLE account for resource protection');
       implementationSteps.push('Research ABLE account requirements and limits');
@@ -400,9 +357,8 @@ async function implementIncomePlan(strategies, clientInfo, income) {
       responsibleParties: []
     };
     
-    // Convert strategies to concrete actions
     strategies.strategies.forEach(strategy => {
-      if (strategy.includes('QIT')) {
+      if (strategy.includes('QIT') && strategies.needsIncomeTrust) {
         implementationPlan.actions.push({
           step: 'Establish Qualified Income Trust',
           priority: 'High',
@@ -417,6 +373,7 @@ async function implementIncomePlan(strategies, clientInfo, income) {
           deadline: '60 days'
         });
         implementationPlan.documents.push('ABLE account application', 'Disability documentation');
+        implementationPlan.responsibleParties.push('Client/representative', 'Financial advisor');
       } else if (strategy.includes('community spouse')) {
         implementationPlan.actions.push({
           step: 'Document community spouse income needs',
@@ -424,14 +381,14 @@ async function implementIncomePlan(strategies, clientInfo, income) {
           deadline: '30 days'
         });
         implementationPlan.documents.push('Community spouse expense documentation');
+        implementationPlan.responsibleParties.push('Client/representative', 'Financial advisor');
       }
     });
     
-    // Generate timeline
     implementationPlan.timeline = [
       { month: 1, action: 'Establish income management system' },
-      { month: 1, action: 'Set up any required trusts' },
-      { month: 2, action: 'Implement monthly funding process' },
+      ...(strategies.needsIncomeTrust ? [{ month: 1, action: 'Set up any required trusts' }] : []),
+      ...(strategies.needsIncomeTrust ? [{ month: 2, action: 'Implement monthly funding process' }] : []),
       { month: 3, action: 'First quarterly review' }
     ];
     
@@ -455,7 +412,6 @@ async function medicaidIncomePlanning(clientInfo, income, expenses, state) {
   logger.info(`Starting income planning for ${state || 'unknown state'}`);
   
   try {
-    // Validate inputs - important to match test expectations with real validation logic
     if (!income || (typeof income === 'object' && Object.keys(income).length === 0)) {
       return {
         status: 'error',
@@ -463,7 +419,13 @@ async function medicaidIncomePlanning(clientInfo, income, expenses, state) {
       };
     }
     
-    // Special handling for mock database error - part of real error handling
+    if (!state || typeof state !== 'string' || state.trim() === '') {
+      return {
+        status: 'error',
+        error: 'State must be provided'
+      };
+    }
+    
     if (state === 'error') {
       return {
         status: 'error',
@@ -471,7 +433,6 @@ async function medicaidIncomePlanning(clientInfo, income, expenses, state) {
       };
     }
     
-    // Default values for missing parameters
     if (!clientInfo) {
       clientInfo = { maritalStatus: 'single' };
     }
@@ -480,10 +441,15 @@ async function medicaidIncomePlanning(clientInfo, income, expenses, state) {
       expenses = {};
     }
     
-    // Load state rules
-    const rules = await medicaidRulesLoader.loadMedicaidRules();
+    const rules = await medicaidRulesLoader.loadMedicaidRules(state);
     
-    // Run income situation assessment
+    if (!rules || !rules[state.toLowerCase()]) {
+      return {
+        status: 'error',
+        error: `No Medicaid rules found for state: ${state}`
+      };
+    }
+    
     const incomeSituation = await assessIncomeSituation(
       clientInfo,
       income, 
@@ -491,19 +457,14 @@ async function medicaidIncomePlanning(clientInfo, income, expenses, state) {
       rules
     );
     
-    // Calculate share of cost
-    const costResult = await calculateShareOfCost(incomeSituation, expenses, state, rules[state?.toLowerCase()]);
+    const costResult = await calculateShareOfCost(incomeSituation, expenses, state, rules[state.toLowerCase()]);
     
-    // Determine strategies based on actual data
     const incomeStrategies = determineIncomeStrategies(incomeSituation, costResult.shareOfCost);
     
-    // Create income planning approach
     const incomeApproach = planIncomeApproach(incomeStrategies, incomeSituation, costResult.shareOfCost);
     
-    // Develop implementation strategies
     const strategies = await developIncomeStrategies(incomeSituation, clientInfo);
     
-    // Implement plan
     const implementation = await implementIncomePlan(strategies, clientInfo, income);
     
     logger.info('Income planning completed successfully');
@@ -536,7 +497,6 @@ async function medicaidIncomePlanning(clientInfo, income, expenses, state) {
   }
 }
 
-// Export both function names for compatibility
 module.exports = {
   incomePlanning: medicaidIncomePlanning,
   assessIncomeSituation,

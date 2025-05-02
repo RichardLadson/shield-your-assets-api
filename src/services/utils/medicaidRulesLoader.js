@@ -9,17 +9,15 @@ const medicaidRules = require('../../data/medicaid_rules_2025.json');
  * @returns {Promise<Object>} State-specific Medicaid rules
  */
 async function loadMedicaidRules(state) {
-  if (!state) {
+  if (!state || typeof state !== 'string') {
     throw new Error('State must be provided to load Medicaid rules');
   }
-  
-  const stateKey = normalizeStateKey(state);
-  
-  if (!medicaidRules[stateKey]) {
-    throw new Error(`Rules not found for state: ${state}`);
+  const rules = JSON.parse(fs.readFileSync('src/data/medicaid_rules_2025.json', 'utf8'));
+  const stateKey = state.toLowerCase();
+  if (!rules[stateKey]) {
+    throw new Error(`No Medicaid rules found for state: ${state}`);
   }
-  
-  return medicaidRules[stateKey];
+  return { [stateKey]: rules[stateKey] };
 }
 
 /**

@@ -1,4 +1,8 @@
 // src/controllers/eligibilityController.js
+// Change this:
+// const { assessMedicaidEligibility } = require('../services/eligibility/eligibilityAssessment');
+
+// To this:
 const { assessMedicaidEligibility } = require('../services/planning/eligibilityAssessment');
 const { getMedicaidRules } = require('../services/utils/medicaidRulesLoader');
 const logger = require('../config/logger');
@@ -22,8 +26,26 @@ async function assessEligibility(req, res) {
       });
     }
     
+    // Create clientInfo object from request data
+    const clientInfo = {
+      maritalStatus,
+      age,
+      healthStatus
+    };
+    
+    // Create medicalNeeds object
+    const medicalNeeds = {
+      criticalHealth: healthStatus === 'critical'
+    };
+    
+    // Call the assessMedicaidEligibility function with the proper parameters
     const result = await assessMedicaidEligibility(
-      assets, income, maritalStatus, state, age, healthStatus, isCrisis
+      clientInfo, 
+      assets, 
+      income, 
+      medicalNeeds, 
+      state, 
+      isCrisis || false
     );
     
     if (result.status === 'error') {

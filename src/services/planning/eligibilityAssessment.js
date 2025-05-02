@@ -3,17 +3,37 @@ const logger = require('../../config/logger');
 const medicaidRules = require('../../data/medicaid_rules_2025.json');
 
 /**
+ * Helper function to safely extract state string
+ * 
+ * @param {string|Object} state - State input (string or object)
+ * @returns {string} Normalized state string
+ */
+function getStateStr(state) {
+  if (typeof state === 'string') {
+    return state.toLowerCase();
+  } else if (state && typeof state === 'object' && state.state) {
+    return state.state.toLowerCase();
+  }
+  
+  // Log error for debugging
+  logger.error(`Invalid state parameter: ${JSON.stringify(state)}`);
+  throw new Error('Invalid state parameter');
+}
+
+/**
  * Assesses Medicaid eligibility based on client income and assets
  * 
  * @param {Object} clientInfo - Demographics including marital status
  * @param {Object} assets - Asset breakdown
  * @param {Object} income - Income breakdown
- * @param {string} state - State of application
+ * @param {string|Object} state - State of application
  * @param {Object} rules - State-specific medicaid rules
  * @returns {Object} Eligibility assessment result
  */
 function assessEligibility(clientInfo, assets, income, state, rules) {
-  logger.debug(`Assessing eligibility for ${state}`);
+  // Extract state string safely
+  const stateStr = getStateStr(state);
+  logger.debug(`Assessing eligibility for ${stateStr}`);
 
   const maritalStatus = clientInfo.maritalStatus?.toLowerCase() || "single";
 
@@ -24,7 +44,7 @@ function assessEligibility(clientInfo, assets, income, state, rules) {
     maritalStatus === "married" ? rules.incomeLimitMarried : rules.incomeLimitSingle;
 
   if (typeof resourceLimit !== "number" || typeof incomeLimit !== "number") {
-    throw new Error(`Missing asset or income limits for ${state}`);
+    throw new Error(`Missing asset or income limits for ${stateStr}`);
   }
 
   const countableAssets = assets.countable || 0;
@@ -41,7 +61,7 @@ function assessEligibility(clientInfo, assets, income, state, rules) {
     countableAssets,
     totalIncome,
     maritalStatus,
-    state
+    state: stateStr
   };
 }
 
@@ -110,16 +130,18 @@ function planEligibilityApproach(strategies, assessment) {
  * @param {Object} clientInfo - Client demographics
  * @param {Object} assets - Client's assets
  * @param {Object} income - Client's income
- * @param {string} state - State of application
+ * @param {string|Object} state - State of application
  * @returns {Promise<Object>} Eligibility assessment result
  */
 async function medicaidEligibilityAssessment(clientInfo, assets, income, state) {
-  logger.info(`Starting eligibility assessment for ${state}`);
-
   try {
-    const rules = medicaidRules[state.toLowerCase()];
+    // Safely extract state string
+    const stateStr = getStateStr(state);
+    logger.info(`Starting eligibility assessment for ${stateStr}`);
+
+    const rules = medicaidRules[stateStr];
     if (!rules) {
-      throw new Error(`No Medicaid rules found for state: ${state}`);
+      throw new Error(`No Medicaid rules found for state: ${stateStr}`);
     }
 
     const assessment = assessEligibility(clientInfo, assets, income, state, rules);
@@ -137,7 +159,7 @@ async function medicaidEligibilityAssessment(clientInfo, assets, income, state) 
   } catch (error) {
     logger.error(`Error in eligibility assessment: ${error.message}`);
     return {
-      error: `Eligibility assessment error: ${error.message}`,
+      error: error.message,
       status: "error"
     };
   }
@@ -150,14 +172,16 @@ async function medicaidEligibilityAssessment(clientInfo, assets, income, state) 
  * @param {Object} assets - Assets like savings, investments, home
  * @param {Object} income - Income sources
  * @param {Object} medicalNeeds - Care level requirements
- * @param {string} state - State of residence
+ * @param {string|Object} state - State of residence
  * @param {boolean} crisis - Whether there's an immediate need
  * @returns {Promise<Object>} Comprehensive eligibility assessment
  */
 async function assessMedicaidEligibility(clientInfo, assets, income, medicalNeeds, state, crisis = false) {
-  logger.info(`Starting comprehensive Medicaid eligibility assessment for ${state}`);
-  
   try {
+    // Safely extract state string
+    const stateStr = getStateStr(state);
+    logger.info(`Starting comprehensive Medicaid eligibility assessment for ${stateStr}`);
+    
     // Validate inputs
     if (!clientInfo || !assets || !income || !state) {
       throw new Error("Missing required parameters for eligibility assessment");
@@ -201,9 +225,9 @@ async function assessMedicaidEligibility(clientInfo, assets, income, medicalNeed
     }
     
     // Get state-specific limits
-    const stateRules = medicaidRules[state.toLowerCase()];
+    const stateRules = medicaidRules[stateStr];
     if (!stateRules) {
-      throw new Error(`Rules not found for state: ${state}`);
+      throw new Error(`Rules not found for state: ${stateStr}`);
     }
     
     // Determine limits based on marital status

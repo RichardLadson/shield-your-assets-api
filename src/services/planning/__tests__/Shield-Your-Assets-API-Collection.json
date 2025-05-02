@@ -1,75 +1,543 @@
 {
     "info": {
-      "name": "Shield Your Assets API - Testing",
-      "_postman_id": "your-random-id-here",
-      "description": "Test suite for Shield Your Assets API",
-      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+        "name": "Shield Your Assets API Tests",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
-      {
-        "name": "Get State Medicaid Rules (Alabama)",
-        "request": {
-          "method": "GET",
-          "header": [],
-          "url": {
-            "raw": "http://localhost:3001/api/eligibility/rules/alabama",
-            "protocol": "http",
-            "host": ["localhost"],
-            "port": "3001",
-            "path": ["api", "eligibility", "rules", "alabama"]
-          }
+        {
+            "name": "POST /api/planning/comprehensive",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "http://localhost:3001/api/planning/comprehensive",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "3001",
+                    "path": [
+                        "api",
+                        "planning",
+                        "comprehensive"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"clientInfo\": {\n    \"name\": \"Richard\",\n    \"age\": 65,\n    \"maritalStatus\": \"married\",\n    \"healthStatus\": \"declining\",\n    \"isCrisis\": false\n  },\n  \"assets\": {\n    \"countable\": 10000\n  },\n  \"income\": {\n    \"social_security\": 1200,\n    \"pension\": 500,\n    \"other\": 0\n  },\n  \"state\": \"florida\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "description": "Request for http://localhost:3001/api/planning/comprehensive"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status code is 200', function () {",
+                            "    pm.response.to.have.status(200);",
+                            "});",
+                            "pm.test('Response is JSON', function () {",
+                            "    pm.response.to.have.header('Content-Type', 'application/json');",
+                            "});"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "POST /api/planning/asset",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "http://localhost:3001/api/planning/asset",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "3001",
+                    "path": [
+                        "api",
+                        "planning",
+                        "asset"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"assets\": {\n    \"countable\": 10000\n  },\n  \"state\": \"florida\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "description": "Request for http://localhost:3001/api/planning/asset"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status code is 200', function () {",
+                            "    pm.response.to.have.status(200);",
+                            "});",
+                            "pm.test('Response is JSON', function () {",
+                            "    pm.response.to.have.header('Content-Type', 'application/json');",
+                            "});"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "POST /api/planning/income",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "http://localhost:3001/api/planning/income",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "3001",
+                    "path": [
+                        "api",
+                        "planning",
+                        "income"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"income\": {\n    \"social_security\": 1200,\n    \"pension\": 500\n  },\n  \"state\": \"florida\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "description": "Request for http://localhost:3001/api/planning/income"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status code is 200', function () {",
+                            "    pm.response.to.have.status(200);",
+                            "});",
+                            "pm.test('Response is JSON', function () {",
+                            "    pm.response.to.have.header('Content-Type', 'application/json');",
+                            "});"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "POST /api/planning/trust",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "http://localhost:3001/api/planning/trust",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "3001",
+                    "path": [
+                        "api",
+                        "planning",
+                        "trust"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"trustType\": \"Miller Trust\",\n  \"state\": \"florida\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "description": "Request for http://localhost:3001/api/planning/trust"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status code is 200', function () {",
+                            "    pm.response.to.have.status(200);",
+                            "});",
+                            "pm.test('Response is JSON', function () {",
+                            "    pm.response.to.have.header('Content-Type', 'application/json');",
+                            "});"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "POST /api/planning/annuity",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "http://localhost:3001/api/planning/annuity",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "3001",
+                    "path": [
+                        "api",
+                        "planning",
+                        "annuity"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"annuityAmount\": 100000,\n  \"state\": \"florida\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "description": "Request for http://localhost:3001/api/planning/annuity"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status code is 200', function () {",
+                            "    pm.response.to.have.status(200);",
+                            "});",
+                            "pm.test('Response is JSON', function () {",
+                            "    pm.response.to.have.header('Content-Type', 'application/json');",
+                            "});"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "POST /api/planning/divestment",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "http://localhost:3001/api/planning/divestment",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "3001",
+                    "path": [
+                        "api",
+                        "planning",
+                        "divestment"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"assetsTransferred\": 50000,\n  \"transferDate\": \"2022-05-01\",\n  \"state\": \"florida\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "description": "Request for http://localhost:3001/api/planning/divestment"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status code is 200', function () {",
+                            "    pm.response.to.have.status(200);",
+                            "});",
+                            "pm.test('Response is JSON', function () {",
+                            "    pm.response.to.have.header('Content-Type', 'application/json');",
+                            "});"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "POST /api/planning/care",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "http://localhost:3001/api/planning/care",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "3001",
+                    "path": [
+                        "api",
+                        "planning",
+                        "care"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"careSetting\": \"home\",\n  \"healthStatus\": \"average\",\n  \"state\": \"florida\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "description": "Request for http://localhost:3001/api/planning/care"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status code is 200', function () {",
+                            "    pm.response.to.have.status(200);",
+                            "});",
+                            "pm.test('Response is JSON', function () {",
+                            "    pm.response.to.have.header('Content-Type', 'application/json');",
+                            "});"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "POST /api/eligibility/assess",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "http://localhost:3001/api/eligibility/assess",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "3001",
+                    "path": [
+                        "api",
+                        "eligibility",
+                        "assess"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"assets\": {\n    \"countable\": 10000\n  },\n  \"income\": {\n    \"social_security\": 1200,\n    \"pension\": 500\n  },\n  \"maritalStatus\": \"married\",\n  \"state\": \"florida\",\n  \"age\": 65,\n  \"healthStatus\": \"good\",\n  \"isCrisis\": false\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "description": "Request for http://localhost:3001/api/eligibility/assess"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status code is 200', function () {",
+                            "    pm.response.to.have.status(200);",
+                            "});",
+                            "pm.test('Response is JSON', function () {",
+                            "    pm.response.to.have.header('Content-Type', 'application/json');",
+                            "});"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "GET /api/eligibility/rules/florida",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://localhost:3001/api/eligibility/rules/florida",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "3001",
+                    "path": [
+                        "api",
+                        "eligibility",
+                        "rules",
+                        "florida"
+                    ]
+                },
+                "description": "Request for http://localhost:3001/api/eligibility/rules/florida"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status code is 200', function () {",
+                            "    pm.response.to.have.status(200);",
+                            "});",
+                            "pm.test('Response is JSON', function () {",
+                            "    pm.response.to.have.header('Content-Type', 'application/json');",
+                            "});"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "POST /api/reports/generate",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "http://localhost:3001/api/reports/generate",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "3001",
+                    "path": [
+                        "api",
+                        "reports",
+                        "generate"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"reportData\": {\n    \"clientName\": \"Richard\",\n    \"planningType\": \"comprehensive\",\n    \"state\": \"florida\"\n  }\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "description": "Request for http://localhost:3001/api/reports/generate"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status code is 200', function () {",
+                            "    pm.response.to.have.status(200);",
+                            "});",
+                            "pm.test('Response is JSON', function () {",
+                            "    pm.response.to.have.header('Content-Type', 'application/json');",
+                            "});"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "GET /api/reports/download/dummy123",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://localhost:3001/api/reports/download/dummy123",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "3001",
+                    "path": [
+                        "api",
+                        "reports",
+                        "download",
+                        "dummy123"
+                    ]
+                },
+                "description": "Request for http://localhost:3001/api/reports/download/dummy123"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status code is 200', function () {",
+                            "    pm.response.to.have.status(200);",
+                            "});",
+                            "pm.test('Response is JSON', function () {",
+                            "    pm.response.to.have.header('Content-Type', 'application/json');",
+                            "});"
+                        ]
+                    }
+                }
+            ]
         }
-      },
-      {
-        "name": "Assess Medicaid Eligibility",
-        "request": {
-          "method": "POST",
-          "header": [
-            {
-              "key": "Content-Type",
-              "name": "Content-Type",
-              "value": "application/json",
-              "type": "text"
-            }
-          ],
-          "body": {
-            "mode": "raw",
-            "raw": "{\n  \"assets\": { \"countable\": 1000 },\n  \"income\": { \"social_security\": 900, \"pension\": 0, \"other\": 0 },\n  \"maritalStatus\": \"single\",\n  \"state\": \"alabama\",\n  \"age\": 65,\n  \"healthStatus\": \"good\",\n  \"isCrisis\": false\n}"
-          },
-          "url": {
-            "raw": "http://localhost:3001/api/eligibility/assess",
-            "protocol": "http",
-            "host": ["localhost"],
-            "port": "3001",
-            "path": ["api", "eligibility", "assess"]
-          }
-        }
-      },
-      {
-        "name": "Comprehensive Medicaid Planning",
-        "request": {
-          "method": "POST",
-          "header": [
-            {
-              "key": "Content-Type",
-              "name": "Content-Type",
-              "value": "application/json",
-              "type": "text"
-            }
-          ],
-          "body": {
-            "mode": "raw",
-            "raw": "{\n  \"assets\": { \"countable\": 10000 },\n  \"income\": { \"social_security\": 1200, \"pension\": 500, \"other\": 0 },\n  \"state\": \"florida\",\n  \"maritalStatus\": \"married\",\n  \"healthStatus\": \"average\",\n  \"isCrisis\": false\n}"
-          },
-          "url": {
-            "raw": "http://localhost:3001/api/planning/comprehensive",
-            "protocol": "http",
-            "host": ["localhost"],
-            "port": "3001",
-            "path": ["api", "planning", "comprehensive"]
-          }
-        }
-      }
     ]
-  }
-  
+}

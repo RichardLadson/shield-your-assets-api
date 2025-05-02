@@ -64,10 +64,13 @@ function getEligibilityStatus(eligibilityResult) {
     const countableAssets = eligibilityResult.countableAssets || 0;
     const resourceLimit = eligibilityResult.resourceLimit || 0;
     
-    if (countableAssets <= resourceLimit) {
+    if (eligibilityResult.isResourceEligible || countableAssets <= resourceLimit) {
       return ["Eligible", "Currently meets resource requirements"];
     } else {
-      const spenddown = eligibilityResult.spenddownAmount || 0;
+      // Use excessResources if available, otherwise calculate
+      const spenddown = eligibilityResult.spenddownAmount || 
+                        eligibilityResult.excessResources || 
+                        (countableAssets - resourceLimit);
       return ["Not Eligible", `Requires spend-down of ${formatCurrency(spenddown)}`];
     }
   } catch (error) {
@@ -108,8 +111,18 @@ class MedicaidPlanningReportGenerator {
     try {
       logger.info(`Generating summary report in ${outputFormat} format`);
       
-      // Get eligibility info
-      const eligibilityResult = this.results?.initialAssessment?.eligibility;
+      // Get eligibility info - adapted to work with different data structures
+      let eligibilityResult;
+      
+      // Check if data is in the expected nested structure
+      if (this.results?.initialAssessment?.eligibility) {
+        eligibilityResult = this.results.initialAssessment.eligibility;
+      } 
+      // Check if data is in a flattened structure (direct API response)
+      else if (this.results.countableAssets !== undefined || this.results.isResourceEligible !== undefined) {
+        eligibilityResult = this.results;
+      }
+      
       if (!eligibilityResult) {
         return "Error: Missing eligibility assessment results";
       }
@@ -135,18 +148,28 @@ class MedicaidPlanningReportGenerator {
       reportLines.push("## Financial Snapshot");
       reportLines.push(`**Countable Assets:** ${formatCurrency(eligibilityResult.countableAssets || 0)}`);
       reportLines.push(`**Resource Limit:** ${formatCurrency(eligibilityResult.resourceLimit || 0)}`);
-      reportLines.push(`**Spend-down Amount:** ${formatCurrency(eligibilityResult.spenddownAmount || 0)}`);
+      reportLines.push(`**Spend-down Amount:** ${formatCurrency(eligibilityResult.spenddownAmount || eligibilityResult.excessResources || 0)}`);
       reportLines.push(`**Monthly Income:** ${formatCurrency(eligibilityResult.totalIncome || 0)}`);
       reportLines.push("");
       
       // Planning urgency
       reportLines.push("## Planning Urgency");
-      reportLines.push(`**Level:** ${eligibilityResult.urgency || 'Unknown'}`);
+      reportLines.push(`**Level:** ${eligibilityResult.urgency || 'Standard'}`);
       reportLines.push("");
       
       // Key strategies
       reportLines.push("## Key Planning Strategies");
-      const strategies = eligibilityResult.planStrategies || [];
+      
+      // Handle different ways strategies might be stored in the results
+      let strategies = [];
+      if (Array.isArray(eligibilityResult.planStrategies)) {
+        strategies = eligibilityResult.planStrategies;
+      } else if (Array.isArray(eligibilityResult.eligibilityStrategies)) {
+        strategies = eligibilityResult.eligibilityStrategies;
+      } else if (Array.isArray(this.results.eligibilityStrategies)) {
+        strategies = this.results.eligibilityStrategies;
+      }
+      
       if (strategies.length > 0) {
         for (const strategy of strategies) {
           reportLines.push(`- ${strategy}`);
@@ -195,8 +218,23 @@ class MedicaidPlanningReportGenerator {
     try {
       logger.info(`Generating detailed report in ${outputFormat} format`);
       
-      // Get assessment sections
-      const initialAssessment = this.results?.initialAssessment || {};
+      // Get assessment sections, supporting both nested and flat structures
+      let eligibilityResult;
+      
+      // Check if data is in the expected nested structure
+      if (this.results?.initialAssessment?.eligibility) {
+        eligibilityResult = this.results.initialAssessment.eligibility;
+      } 
+      // Check if data is in a flattened structure (direct API response)
+      else if (this.results.countableAssets !== undefined || this.results.isResourceEligible !== undefined) {
+        eligibilityResult = this.results;
+      }
+      
+      if (!eligibilityResult) {
+        return "Error: Missing eligibility assessment results";
+      }
+      
+      // Get other sections, supporting both structures
       const assetProtection = this.results?.assetProtection || {};
       const communitySpouseProtection = this.results?.communitySpouseProtection || {};
       const homesteadProtection = this.results?.homesteadProtection || {};
@@ -226,12 +264,11 @@ class MedicaidPlanningReportGenerator {
       reportLines.push("");
       
       // Eligibility summary
-      const eligibilityResult = initialAssessment.eligibility || {};
       const [status, statusReason] = getEligibilityStatus(eligibilityResult);
       reportLines.push("## Eligibility Summary");
       reportLines.push(`**Status:** ${status}`);
       reportLines.push(`**Reason:** ${statusReason}`);
-      reportLines.push(`**Planning Urgency:** ${eligibilityResult.urgency || 'Unknown'}`);
+      reportLines.push(`**Planning Urgency:** ${eligibilityResult.urgency || 'Standard'}`);
       reportLines.push("");
       
       // Financial analysis
@@ -242,7 +279,7 @@ class MedicaidPlanningReportGenerator {
       reportLines.push(`**Countable Assets:** ${formatCurrency(eligibilityResult.countableAssets || 0)}`);
       reportLines.push(`**Non-Countable Assets:** ${formatCurrency(eligibilityResult.nonCountableAssets || 0)}`);
       reportLines.push(`**Resource Limit:** ${formatCurrency(eligibilityResult.resourceLimit || 0)}`);
-      reportLines.push(`**Spend-down Amount:** ${formatCurrency(eligibilityResult.spenddownAmount || 0)}`);
+      reportLines.push(`**Spend-down Amount:** ${formatCurrency(eligibilityResult.spenddownAmount || eligibilityResult.excessResources || 0)}`);
       reportLines.push("");
       
       // Income analysis
@@ -257,7 +294,19 @@ class MedicaidPlanningReportGenerator {
       
       // Asset strategies
       reportLines.push("### Asset Protection Strategies");
-      const assetStrategies = assetProtection?.strategies || eligibilityResult.planStrategies || [];
+      
+      // Handle different ways strategies might be stored in the results
+      let assetStrategies = [];
+      if (Array.isArray(assetProtection?.strategies)) {
+        assetStrategies = assetProtection.strategies;
+      } else if (Array.isArray(eligibilityResult.planStrategies)) {
+        assetStrategies = eligibilityResult.planStrategies;
+      } else if (Array.isArray(eligibilityResult.eligibilityStrategies)) {
+        assetStrategies = eligibilityResult.eligibilityStrategies;
+      } else if (Array.isArray(this.results.eligibilityStrategies)) {
+        assetStrategies = this.results.eligibilityStrategies;
+      }
+      
       if (assetStrategies.length > 0) {
         for (const strategy of assetStrategies) {
           reportLines.push(`- ${strategy}`);
@@ -269,7 +318,13 @@ class MedicaidPlanningReportGenerator {
       
       // Implementation steps
       reportLines.push("## Implementation Steps");
-      const nextSteps = eligibilityResult.nextSteps || [];
+      
+      // Look for next steps in different possible locations
+      const nextSteps = eligibilityResult.nextSteps || 
+                       this.results.nextSteps ||
+                       eligibilityResult.priorityActions ||
+                       this.results.priorityActions || [];
+                       
       if (nextSteps.length > 0) {
         for (let i = 0; i < nextSteps.length; i++) {
           reportLines.push(`${i + 1}. ${nextSteps[i]}`);
@@ -358,12 +413,23 @@ class MedicaidPlanningReportGenerator {
     try {
       logger.info(`Generating client-friendly report in ${outputFormat} format`);
       
-      // Get eligibility info
-      const eligibilityResult = this.results?.initialAssessment?.eligibility;
+      // Get eligibility info, supporting both nested and flat structures
+      let eligibilityResult;
+      
+      // Check if data is in the expected nested structure
+      if (this.results?.initialAssessment?.eligibility) {
+        eligibilityResult = this.results.initialAssessment.eligibility;
+      } 
+      // Check if data is in a flattened structure (direct API response)
+      else if (this.results.countableAssets !== undefined || this.results.isResourceEligible !== undefined) {
+        eligibilityResult = this.results;
+      }
+      
       if (!eligibilityResult) {
         return "Error: Missing eligibility assessment results";
       }
       
+      // Determine eligibility status
       const [status, statusReason] = getEligibilityStatus(eligibilityResult);
       
       // Create report content
@@ -393,7 +459,9 @@ class MedicaidPlanningReportGenerator {
       
       const countableAssets = eligibilityResult.countableAssets || 0;
       const resourceLimit = eligibilityResult.resourceLimit || 0;
-      const spenddown = eligibilityResult.spenddownAmount || 0;
+      const spenddown = eligibilityResult.spenddownAmount || 
+                       eligibilityResult.excessResources || 
+                       (countableAssets > resourceLimit ? countableAssets - resourceLimit : 0);
       
       reportLines.push(`**Your countable resources:** ${formatCurrency(countableAssets)}`);
       reportLines.push(`**Medicaid's resource limit:** ${formatCurrency(resourceLimit)}`);
@@ -413,7 +481,17 @@ class MedicaidPlanningReportGenerator {
       reportLines.push("## What You Can Do Next");
       
       // Process eligibility strategies and simplify where applicable
-      const eligibilityStrategies = eligibilityResult.planStrategies || [];
+      let eligibilityStrategies = [];
+      
+      // Look for strategies in different possible locations
+      if (Array.isArray(eligibilityResult.planStrategies)) {
+        eligibilityStrategies = eligibilityResult.planStrategies;
+      } else if (Array.isArray(eligibilityResult.eligibilityStrategies)) {
+        eligibilityStrategies = eligibilityResult.eligibilityStrategies;
+      } else if (Array.isArray(this.results.eligibilityStrategies)) {
+        eligibilityStrategies = this.results.eligibilityStrategies;
+      }
+      
       const simplifiedStrategies = [];
       
       for (const strategy of eligibilityStrategies) {
@@ -459,6 +537,44 @@ class MedicaidPlanningReportGenerator {
     } catch (error) {
       logger.error(`Error generating client-friendly report: ${error.message}`);
       return `Error generating client-friendly report: ${error.message}`;
+    }
+  }
+  
+  /**
+   * Save the report to a file
+   * @param {string} content - Report content to save
+   * @param {string} filename - Name of the file
+   * @returns {Promise<Object>} - Save result
+   */
+  async saveReport(content, filename) {
+    try {
+      logger.info(`Saving report to file: ${filename}`);
+      
+      // Ensure reports directory exists
+      const reportsDir = path.join(process.cwd(), 'reports');
+      try {
+        await fs.mkdir(reportsDir, { recursive: true });
+      } catch (err) {
+        if (err.code !== 'EEXIST') {
+          throw err;
+        }
+      }
+      
+      // Write the report to file
+      const filePath = path.join(reportsDir, filename);
+      await fs.writeFile(filePath, content);
+      
+      return {
+        success: true,
+        filePath,
+        message: `Report saved successfully as ${filename}`
+      };
+    } catch (error) {
+      logger.error(`Error saving report: ${error.message}`);
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
   

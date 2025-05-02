@@ -1,4 +1,3 @@
-// src/services/planning/trustPlanning.js
 const logger = require('../../config/logger');
 const medicaidRulesLoader = require('../utils/medicaidRulesLoader');
 
@@ -14,7 +13,7 @@ const medicaidRulesLoader = require('../utils/medicaidRulesLoader');
  * @returns {Object} Trust needs assessment
  */
 function assessTrustNeeds(clientInfo, assets, income, eligibilityResults, state, medicalInfo) {
-  logger.debug(`Assessing trust needs for client in ${state}`);
+  logger.debug(`Assessing trust needs for client in ${state || 'unknown state'}`);
 
   // Default response structure
   const assessment = {
@@ -71,7 +70,7 @@ function assessTrustNeeds(clientInfo, assets, income, eligibilityResults, state,
       lookbackConcerns: true
     };
     
-    // Higher risk for older clients with health issues
+    // Higher risk for older clients
     if (clientInfo.age > 80) {
       assessment.riskAssessment.transferRisk = 'high';
     }
@@ -97,7 +96,7 @@ function assessTrustNeeds(clientInfo, assets, income, eligibilityResults, state,
  * @returns {Object} Trust options evaluation
  */
 function evaluateTrustOptions(needsAssessment, clientInfo, assets, state) {
-  logger.debug(`Evaluating trust options for ${state}`);
+  logger.debug(`Evaluating trust options for ${state || 'unknown state'}`);
 
   const options = {
     recommendedTrustTypes: [],
@@ -118,6 +117,7 @@ function evaluateTrustOptions(needsAssessment, clientInfo, assets, state) {
   try {
     rules = medicaidRulesLoader.getMedicaidRules(state.toLowerCase());
   } catch (error) {
+    logger.warn(`Failed to load rules for ${state}: ${error.message}`);
     rules = { lookbackPeriod: 60 }; // Default fallback
   }
 
@@ -224,7 +224,7 @@ function evaluateTrustOptions(needsAssessment, clientInfo, assets, state) {
  * @returns {Object} Trust funding strategy
  */
 function determineTrustFunding(trustOptions, clientInfo, assets, income, state) {
-  logger.debug(`Determining trust funding strategy for ${state}`);
+  logger.debug(`Determining trust funding strategy for ${state || 'unknown state'}`);
 
   const fundingStrategy = {
     fundingStrategy: '',
@@ -244,6 +244,7 @@ function determineTrustFunding(trustOptions, clientInfo, assets, income, state) 
   try {
     rules = medicaidRulesLoader.getMedicaidRules(state.toLowerCase());
   } catch (error) {
+    logger.warn(`Failed to load rules for ${state}: ${error.message}`);
     rules = { lookbackPeriod: 60 }; // Default fallback
   }
 
@@ -345,11 +346,36 @@ function determineTrustFunding(trustOptions, clientInfo, assets, income, state) 
  * @returns {Promise<Object>} Complete trust planning result
  */
 async function medicaidTrustPlanning(clientInfo, assets, income, eligibilityResults, state) {
-  logger.info(`Starting trust planning process for ${state}`);
+  logger.info(`Starting trust planning process for ${state || 'unknown state'}`);
   
   try {
-    // Skip this check for testing - handle errors explicitly for invalid states
+    // Validate state
+    if (!state || typeof state !== 'string' || state.trim() === '') {
+      logger.error('State validation failed: State must be provided');
+      return {
+        status: 'error',
+        error: 'State must be provided',
+        needsAssessment: {
+          dataConcerns: ['Missing or invalid state']
+        }
+      };
+    }
+
+    // Validate other required inputs
+    if (!clientInfo || !assets || !income || !eligibilityResults) {
+      logger.error('Input validation failed: Missing required inputs');
+      return {
+        status: 'error',
+        error: 'Missing required inputs: clientInfo, assets, income, and eligibilityResults are required',
+        needsAssessment: {
+          dataConcerns: ['Missing required inputs']
+        }
+      };
+    }
+
+    // Check for invalid state
     if (state.toLowerCase() === 'invalid') {
+      logger.error(`Invalid state provided: ${state}`);
       throw new Error(`Invalid state or rules not found: ${state}`);
     }
     

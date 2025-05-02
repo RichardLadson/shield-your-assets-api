@@ -1,4 +1,3 @@
-// src/controllers/planningController.js
 const logger = require('../config/logger');
 const { medicaidPlanning } = require('../services/planning/medicaidPlanning');
 const { medicaidAssetPlanning } = require('../services/planning/assetPlanning');
@@ -7,28 +6,44 @@ const { medicaidTrustPlanning } = require('../services/planning/trustPlanning');
 const { medicaidAnnuityPlanning } = require('../services/planning/annuityPlanning');
 const { medicaidDivestmentPlanning } = require('../services/planning/divestmentPlanning');
 const { medicaidCarePlanning } = require('../services/planning/carePlanning');
+const medicaidRulesLoader = require('../services/utils/medicaidRulesLoader');
 
 /**
  * Process comprehensive Medicaid planning
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
  */
 async function comprehensivePlanning(req, res) {
   try {
     logger.info('Received comprehensive planning request');
+    logger.debug(`Raw request body: ${JSON.stringify(req.body, null, 2)}`);
     
     const { clientInfo, assets, income, expenses, medicalInfo, livingInfo, state } = req.body;
     
-    // Validate required fields
-    if (!clientInfo || !assets || !income || !state) {
-      logger.error('Missing required fields in comprehensive planning request');
+    if (!clientInfo || !assets || !income || !state || typeof state !== 'string' || state.trim() === '') {
+      logger.error('Missing or invalid required fields in comprehensive planning request');
       return res.status(400).json({
-        error: 'Missing required fields: clientInfo, assets, income, and state are required',
+        error: 'Missing or invalid required fields: clientInfo, assets, income, and state (non-empty string) are required',
         status: 'error'
       });
     }
     
-    // Call the medicaidPlanning service
+    if (!clientInfo.name || !clientInfo.age || !clientInfo.maritalStatus) {
+      logger.error('Missing required fields in clientInfo');
+      return res.status(400).json({
+        error: 'Missing required fields in clientInfo: name, age, and maritalStatus are required',
+        status: 'error'
+      });
+    }
+    
+    try {
+      await medicaidRulesLoader.loadMedicaidRules(state.toLowerCase());
+    } catch (error) {
+      logger.error(`Invalid state in comprehensive planning request: ${state}`);
+      return res.status(400).json({
+        error: `Invalid state: ${state}`,
+        status: 'error'
+      });
+    }
+    
     const result = await medicaidPlanning(
       clientInfo, 
       assets, 
@@ -39,12 +54,16 @@ async function comprehensivePlanning(req, res) {
       state
     );
     
-    logger.info('Comprehensive planning completed successfully');
-    return res.status(200).json({
-      message: 'Comprehensive planning completed successfully',
+    const message = result.status === 'success' 
+      ? 'Comprehensive planning completed successfully' 
+      : 'Comprehensive planning failed';
+    
+    logger.info(message);
+    return res.status(result.status === 'success' ? 200 : 400).json({
+      message,
       planningType: 'comprehensive',
       clientName: clientInfo.name || 'Client',
-      state,
+      state: state.toLowerCase(),
       status: result.status,
       planningResults: result
     });
@@ -60,33 +79,59 @@ async function comprehensivePlanning(req, res) {
 
 /**
  * Process asset planning
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
  */
 async function assetPlanning(req, res) {
   try {
     logger.info('Received asset planning request');
+    logger.debug(`Raw request body: ${JSON.stringify(req.body, null, 2)}`);
     
-    const { clientInfo, assets, state } = req.body;
+    const { clientInfo, assets, income, expenses, homeInfo, state } = req.body;
     
-    // Validate required fields
-    if (!clientInfo || !assets || !state) {
-      logger.error('Missing required fields in asset planning request');
+    if (!clientInfo || !assets || !state || typeof state !== 'string' || state.trim() === '') {
+      logger.error('Missing or invalid required fields in asset planning request');
       return res.status(400).json({
-        error: 'Missing required fields: clientInfo, assets, and state are required',
+        error: 'Missing or invalid required fields: clientInfo, assets, and state (non-empty string) are required',
         status: 'error'
       });
     }
     
-    // Call the asset planning service
-    const result = await medicaidAssetPlanning(clientInfo, assets, state);
+    if (!clientInfo.name || !clientInfo.age || !clientInfo.maritalStatus) {
+      logger.error('Missing required fields in clientInfo');
+      return res.status(400).json({
+        error: 'Missing required fields in clientInfo: name, age, and maritalStatus are required',
+        status: 'error'
+      });
+    }
     
-    logger.info('Asset planning completed successfully');
-    return res.status(200).json({
-      message: 'Asset planning completed successfully',
+    try {
+      await medicaidRulesLoader.loadMedicaidRules(state.toLowerCase());
+    } catch (error) {
+      logger.error(`Invalid state in asset planning request: ${state}`);
+      return res.status(400).json({
+        error: `Invalid state: ${state}`,
+        status: 'error'
+      });
+    }
+    
+    const result = await medicaidAssetPlanning(
+      clientInfo, 
+      assets, 
+      income || {}, 
+      expenses || {}, 
+      homeInfo || {}, 
+      state
+    );
+    
+    const message = result.status === 'success' 
+      ? 'Asset planning completed successfully' 
+      : 'Asset planning failed';
+    
+    logger.info(message);
+    return res.status(result.status === 'success' ? 200 : 400).json({
+      message,
       planningType: 'asset',
       clientName: clientInfo.name || 'Client',
-      state,
+      state: state.toLowerCase(),
       status: result.status,
       planningResults: result
     });
@@ -102,33 +147,52 @@ async function assetPlanning(req, res) {
 
 /**
  * Process income planning
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
  */
 async function incomePlanning(req, res) {
   try {
     logger.info('Received income planning request');
+    logger.debug(`Raw request body: ${JSON.stringify(req.body, null, 2)}`);
     
     const { clientInfo, income, expenses, state } = req.body;
     
-    // Validate required fields
-    if (!clientInfo || !income || !state) {
-      logger.error('Missing required fields in income planning request');
+    if (!clientInfo || !income || !state || typeof state !== 'string' || state.trim() === '') {
+      logger.error('Missing or invalid required fields in income planning request');
       return res.status(400).json({
-        error: 'Missing required fields: clientInfo, income, and state are required',
+        error: 'Missing or invalid required fields: clientInfo, income, and state (non-empty string) are required',
         status: 'error'
       });
     }
     
-    // Call the income planning service
+    if (!clientInfo.name || !clientInfo.age || !clientInfo.maritalStatus) {
+      logger.error('Missing required fields in clientInfo');
+      return res.status(400).json({
+        error: 'Missing required fields in clientInfo: name, age, and maritalStatus are required',
+        status: 'error'
+      });
+    }
+    
+    try {
+      await medicaidRulesLoader.loadMedicaidRules(state.toLowerCase());
+    } catch (error) {
+      logger.error(`Invalid state in income planning request: ${state}`);
+      return res.status(400).json({
+        error: `Invalid state: ${state}`,
+        status: 'error'
+      });
+    }
+    
     const result = await medicaidIncomePlanning(clientInfo, income, expenses || {}, state);
     
-    logger.info('Income planning completed successfully');
-    return res.status(200).json({
-      message: 'Income planning completed successfully',
+    const message = result.status === 'success' 
+      ? 'Income planning completed successfully' 
+      : 'Income planning failed';
+    
+    logger.info(message);
+    return res.status(result.status === 'success' ? 200 : 400).json({
+      message,
       planningType: 'income',
       clientName: clientInfo.name || 'Client',
-      state,
+      state: state.toLowerCase(),
       status: result.status,
       planningResults: result
     });
@@ -144,33 +208,52 @@ async function incomePlanning(req, res) {
 
 /**
  * Process trust planning
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
  */
 async function trustPlanning(req, res) {
   try {
     logger.info('Received trust planning request');
+    logger.debug(`Raw request body: ${JSON.stringify(req.body, null, 2)}`);
     
-    const { clientInfo, assets, state } = req.body;
+    const { clientInfo, assets, income, eligibilityResults, state } = req.body;
     
-    // Validate required fields
-    if (!clientInfo || !assets || !state) {
-      logger.error('Missing required fields in trust planning request');
+    if (!clientInfo || !assets || !income || !eligibilityResults || !state || typeof state !== 'string' || state.trim() === '') {
+      logger.error('Missing or invalid required fields in trust planning request');
       return res.status(400).json({
-        error: 'Missing required fields: clientInfo, assets, and state are required',
+        error: 'Missing or invalid required fields: clientInfo, assets, income, eligibilityResults, and state (non-empty string) are required',
         status: 'error'
       });
     }
     
-    // Call the trust planning service
-    const result = await medicaidTrustPlanning(clientInfo, assets, state);
+    if (!clientInfo.name || !clientInfo.age || !clientInfo.maritalStatus) {
+      logger.error('Missing required fields in clientInfo');
+      return res.status(400).json({
+        error: 'Missing required fields in clientInfo: name, age, and maritalStatus are required',
+        status: 'error'
+      });
+    }
     
-    logger.info('Trust planning completed successfully');
-    return res.status(200).json({
-      message: 'Trust planning completed successfully',
+    try {
+      await medicaidRulesLoader.loadMedicaidRules(state.toLowerCase());
+    } catch (error) {
+      logger.error(`Invalid state in trust planning request: ${state}`);
+      return res.status(400).json({
+        error: `Invalid state: ${state}`,
+        status: 'error'
+      });
+    }
+    
+    const result = await medicaidTrustPlanning(clientInfo, assets, income, eligibilityResults, state);
+    
+    const message = result.status === 'success' 
+      ? 'Trust planning completed successfully' 
+      : 'Trust planning failed';
+    
+    logger.info(message);
+    return res.status(result.status === 'success' ? 200 : 400).json({
+      message,
       planningType: 'trust',
       clientName: clientInfo.name || 'Client',
-      state,
+      state: state.toLowerCase(),
       status: result.status,
       planningResults: result
     });
@@ -186,33 +269,56 @@ async function trustPlanning(req, res) {
 
 /**
  * Process annuity planning
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
  */
 async function annuityPlanning(req, res) {
   try {
     logger.info('Received annuity planning request');
+    logger.debug(`Raw request body: ${JSON.stringify(req.body, null, 2)}`);
     
-    const { clientInfo, assets, state } = req.body;
+    const { clientInfo, assets, income, state } = req.body;
     
     // Validate required fields
-    if (!clientInfo || !assets || !state) {
-      logger.error('Missing required fields in annuity planning request');
+    if (!clientInfo || !assets || !state || typeof state !== 'string' || state.trim() === '') {
+      logger.error('Missing or invalid required fields in annuity planning request');
       return res.status(400).json({
-        error: 'Missing required fields: clientInfo, assets, and state are required',
+        error: 'Missing or invalid required fields: clientInfo, assets, and state (non-empty string) are required',
+        status: 'error'
+      });
+    }
+    
+    // Validate clientInfo fields
+    if (!clientInfo.name || !clientInfo.age || !clientInfo.maritalStatus) {
+      logger.error('Missing required fields in clientInfo');
+      return res.status(400).json({
+        error: 'Missing required fields in clientInfo: name, age, and maritalStatus are required',
+        status: 'error'
+      });
+    }
+    
+    // Validate state against supported states
+    try {
+      await medicaidRulesLoader.loadMedicaidRules(state.toLowerCase());
+    } catch (error) {
+      logger.error(`Invalid state in annuity planning request: ${state}`);
+      return res.status(400).json({
+        error: `Invalid state: ${state}`,
         status: 'error'
       });
     }
     
     // Call the annuity planning service
-    const result = await medicaidAnnuityPlanning(clientInfo, assets, state);
+    const result = await medicaidAnnuityPlanning(clientInfo, assets, income || {}, null, state);
     
-    logger.info('Annuity planning completed successfully');
-    return res.status(200).json({
-      message: 'Annuity planning completed successfully',
+    const message = result.status === 'success' 
+      ? 'Annuity planning completed successfully' 
+      : 'Annuity planning failed';
+    
+    logger.info(message);
+    return res.status(result.status === 'success' ? 200 : 400).json({
+      message,
       planningType: 'annuity',
       clientName: clientInfo.name || 'Client',
-      state,
+      state: state.toLowerCase(),
       status: result.status,
       planningResults: result
     });
@@ -228,33 +334,52 @@ async function annuityPlanning(req, res) {
 
 /**
  * Process divestment planning
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
  */
 async function divestmentPlanning(req, res) {
   try {
     logger.info('Received divestment planning request');
+    logger.debug(`Raw request body: ${JSON.stringify(req.body, null, 2)}`);
     
-    const { clientInfo, assets, state } = req.body;
+    const { clientInfo, assets, pastTransfers, state } = req.body;
     
-    // Validate required fields
-    if (!clientInfo || !assets || !state) {
-      logger.error('Missing required fields in divestment planning request');
+    if (!clientInfo || !assets || !state || typeof state !== 'string' || state.trim() === '') {
+      logger.error('Missing or invalid required fields in divestment planning request');
       return res.status(400).json({
-        error: 'Missing required fields: clientInfo, assets, and state are required',
+        error: 'Missing or invalid required fields: clientInfo, assets, and state (non-empty string) are required',
         status: 'error'
       });
     }
     
-    // Call the divestment planning service
-    const result = await medicaidDivestmentPlanning(clientInfo, assets, state);
+    if (!clientInfo.name || !clientInfo.age || !clientInfo.maritalStatus) {
+      logger.error('Missing required fields in clientInfo');
+      return res.status(400).json({
+        error: 'Missing required fields in clientInfo: name, age, and maritalStatus are required',
+        status: 'error'
+      });
+    }
     
-    logger.info('Divestment planning completed successfully');
-    return res.status(200).json({
-      message: 'Divestment planning completed successfully',
+    try {
+      await medicaidRulesLoader.loadMedicaidRules(state.toLowerCase());
+    } catch (error) {
+      logger.error(`Invalid state in divestment planning request: ${state}`);
+      return res.status(400).json({
+        error: `Invalid state: ${state}`,
+        status: 'error'
+      });
+    }
+    
+    const result = await medicaidDivestmentPlanning(clientInfo, assets, pastTransfers || [], state);
+    
+    const message = result.status === 'success' 
+      ? 'Divestment planning completed successfully' 
+      : 'Divestment planning failed';
+    
+    logger.info(message);
+    return res.status(result.status === 'success' ? 200 : 400).json({
+      message,
       planningType: 'divestment',
       clientName: clientInfo.name || 'Client',
-      state,
+      state: state.toLowerCase(),
       status: result.status,
       planningResults: result
     });
@@ -270,33 +395,52 @@ async function divestmentPlanning(req, res) {
 
 /**
  * Process care planning
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
  */
 async function carePlanning(req, res) {
   try {
     logger.info('Received care planning request');
+    logger.debug(`Raw request body: ${JSON.stringify(req.body, null, 2)}`);
     
     const { clientInfo, medicalInfo, livingInfo, state } = req.body;
     
-    // Validate required fields
-    if (!clientInfo || !medicalInfo || !livingInfo || !state) {
-      logger.error('Missing required fields in care planning request');
+    if (!clientInfo || !medicalInfo || !livingInfo || !state || typeof state !== 'string' || state.trim() === '') {
+      logger.error('Missing or invalid required fields in care planning request');
       return res.status(400).json({
-        error: 'Missing required fields: clientInfo, medicalInfo, livingInfo, and state are required',
+        error: 'Missing or invalid required fields: clientInfo, medicalInfo, livingInfo, and state (non-empty string) are required',
         status: 'error'
       });
     }
     
-    // Call the care planning service
+    if (!clientInfo.name || !clientInfo.age || !clientInfo.maritalStatus) {
+      logger.error('Missing required fields in clientInfo');
+      return res.status(400).json({
+        error: 'Missing required fields in clientInfo: name, age, and maritalStatus are required',
+        status: 'error'
+      });
+    }
+    
+    try {
+      await medicaidRulesLoader.loadMedicaidRules(state.toLowerCase());
+    } catch (error) {
+      logger.error(`Invalid state in care planning request: ${state}`);
+      return res.status(400).json({
+        error: `Invalid state: ${state}`,
+        status: 'error'
+      });
+    }
+    
     const result = await medicaidCarePlanning(clientInfo, medicalInfo, livingInfo, state);
     
-    logger.info('Care planning completed successfully');
-    return res.status(200).json({
-      message: 'Care planning completed successfully',
+    const message = result.status === 'success' 
+      ? 'Care planning completed successfully' 
+      : 'Care planning failed';
+    
+    logger.info(message);
+    return res.status(result.status === 'success' ? 200 : 400).json({
+      message,
       planningType: 'care',
       clientName: clientInfo.name || 'Client',
-      state,
+      state: state.toLowerCase(),
       status: result.status,
       planningResults: result
     });

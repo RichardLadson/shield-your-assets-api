@@ -71,6 +71,7 @@ const homeInfoSchema = Joi.object({
  */
 function validateClientInfo(clientInfo) {
   try {
+    logger.debug(`Raw clientInfo input: ${JSON.stringify(clientInfo)}`);
     logger.debug('Validating client information');
 
     if (!clientInfo) {
@@ -83,6 +84,7 @@ function validateClientInfo(clientInfo) {
       const camelKey = key.replace(/[-_\s](.)/g, (_, c) => c.toUpperCase());
       normalizedClientInfo[camelKey] = value;
     }
+    logger.debug(`Normalized clientInfo: ${JSON.stringify(normalizedClientInfo)}`);
 
     // Normalize specific fields
     if (normalizedClientInfo.maritalStatus) {
@@ -94,6 +96,7 @@ function validateClientInfo(clientInfo) {
 
     // Validate with Joi
     const { error, value } = clientInfoSchema.validate(normalizedClientInfo, { abortEarly: false });
+    logger.debug(`Joi validation result: ${JSON.stringify({ error, value })}`);
     if (error) {
       const errorMessage = error.details.map(detail => detail.message).join('; ');
       logger.error(`Client info validation error: ${errorMessage}`);
@@ -207,10 +210,17 @@ function validateAssets(assets) {
  */
 function validateIncome(income) {
   try {
+    logger.debug(`Raw income input: ${JSON.stringify(income)}`);
     logger.debug('Validating income');
 
-    if (!income) {
-      throw new ValidationError('Income is required');
+    // Handle null, undefined, or empty income (make it optional)
+    if (!income || Object.keys(income).length === 0) {
+      logger.debug('Income is null, undefined, or empty; treating as valid');
+      return {
+        valid: true,
+        message: '',
+        normalizedData: {}
+      };
     }
 
     // Normalize income keys to snake_case
@@ -226,9 +236,11 @@ function validateIncome(income) {
       }
       normalizedIncome[normalizedKey] = normalizedValue;
     }
+    logger.debug(`Normalized income: ${JSON.stringify(normalizedIncome)}`);
 
     // Validate with Joi
     const { error, value } = incomeSchema.validate(normalizedIncome, { abortEarly: false });
+    logger.debug(`Joi validation result: ${JSON.stringify({ error, value })}`);
     if (error) {
       const errorMessage = error.details.map(detail => detail.message).join('; ');
       logger.error(`Income validation error: ${errorMessage}`);

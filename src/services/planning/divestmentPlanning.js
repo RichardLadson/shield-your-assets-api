@@ -5,7 +5,11 @@ const { getMedicaidRules } = require('../utils/medicaidRulesLoader');
  * Analyze past transfers according to Medicaid rules
  */
 function analyzePastTransfers(pastTransfers = [], state) {
-  const rules = getMedicaidRules(state.toLowerCase());
+  // Check if state is an object and extract state string if needed
+  const stateStr = typeof state === 'string' ? state.toLowerCase() : 
+                  (state && typeof state === 'object' && state.state) ? state.state.toLowerCase() : 'unknown';
+  
+  const rules = getMedicaidRules(stateStr);
   const now = new Date();
   const lookbackMonths = rules.lookbackPeriod || 60; // Default to 60 months if not specified
   const annualExclusion = rules.annualGiftExclusion || 18000; // Default to $18,000 if not specified
@@ -149,7 +153,11 @@ function analyzePastTransfers(pastTransfers = [], state) {
  * Calculate penalty period based on non-exempt transfer total
  */
 function calculatePenaltyPeriod(analysis, state) {
-  const rules = getMedicaidRules(state.toLowerCase());
+  // Check if state is an object and extract state string if needed
+  const stateStr = typeof state === 'string' ? state.toLowerCase() : 
+                  (state && typeof state === 'object' && state.state) ? state.state.toLowerCase() : 'unknown';
+  
+  const rules = getMedicaidRules(stateStr);
   const divisor = rules.penaltyDivisor || 9901; // Default divisor if not found
   const nonExempt = analysis.nonExemptTotal || 0;
   
@@ -277,9 +285,19 @@ function developMitigationStrategies(analysis, penaltyCalc, clientInfo = {}, sta
 /**
  * Full divestment planning workflow
  */
-async function medicaidDivestmentPlanning(clientInfo, pastTransfers, state) {
-  logger.info(`Starting comprehensive divestment planning for ${state}`);
+async function medicaidDivestmentPlanning(clientInfo, assets, pastTransfers, state) {
+  // Safely log state information for debugging
+  logger.info(`Starting comprehensive divestment planning for ${typeof state === 'object' ? JSON.stringify(state) : state}`);
+  
   try {
+    // Extract state string if state is an object
+    const stateStr = typeof state === 'string' ? state.toLowerCase() : 
+                    (state && typeof state === 'object' && state.state) ? state.state.toLowerCase() : 'unknown';
+    
+    if (stateStr === 'unknown') {
+      throw new Error('Invalid state parameter: could not determine state');
+    }
+    
     const transferAnalysis = analyzePastTransfers(pastTransfers || [], state);
     const penaltyCalculation = calculatePenaltyPeriod(transferAnalysis, state);
     const mitigationStrategies = developMitigationStrategies(
@@ -295,7 +313,13 @@ async function medicaidDivestmentPlanning(clientInfo, pastTransfers, state) {
       mitigationStrategies,
       strategies: mitigationStrategies.strategies,
       priorityActions: mitigationStrategies.priorityActions,
-      stateSpecificConsiderations: state.toLowerCase(),
+      stateSpecificConsiderations: {
+        description: `${stateStr} specific divestment considerations`,
+        requirements: [
+          `${stateStr} has specific look-back period and penalty calculations`,
+          `Review ${stateStr} Medicaid manual for divestment policies`
+        ]
+      },
       planningReport: {
         summary: `Divestment Planning Summary for ${clientInfo.name || 'Client'}`,
         recommendations: mitigationStrategies.strategies,
