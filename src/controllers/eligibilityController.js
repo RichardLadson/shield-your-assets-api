@@ -1,106 +1,76 @@
 // src/controllers/eligibilityController.js
-// Change this:
-// const { assessMedicaidEligibility } = require('../services/eligibility/eligibilityAssessment');
-
-// To this:
-const { assessMedicaidEligibility } = require('../services/planning/eligibilityAssessment');
-const { getMedicaidRules } = require('../services/utils/medicaidRulesLoader');
 const logger = require('../config/logger');
+const eligibilityService = require('../services/eligibility/eligibilityService');
 
-/**
- * Assess eligibility based on submitted data
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-async function assessEligibility(req, res) {
+exports.assessEligibility = async (req, res) => {
   try {
-    logger.info('Received eligibility assessment request');
+    const { clientInfo, assets, income, state } = req.body;
     
-    const { assets, income, maritalStatus, state, age, healthStatus, isCrisis } = req.body;
+    // Collect missing required fields
+    const missingFields = [];
     
-    if (!assets || !income || !maritalStatus || !state || !age) {
-      logger.error('Missing required fields in eligibility assessment request');
+    if (!clientInfo) {
+      missingFields.push('clientInfo');
+    } else {
+      if (!clientInfo.name) missingFields.push('clientInfo.name');
+      if (clientInfo.age === undefined) missingFields.push('clientInfo.age');
+      if (!clientInfo.maritalStatus) missingFields.push('clientInfo.maritalStatus');
+    }
+    
+    if (!state) missingFields.push('state');
+    if (!assets || Object.keys(assets).length === 0) missingFields.push('assets');
+    if (!income || Object.keys(income).length === 0) missingFields.push('income');
+    
+    // Return detailed error if fields are missing
+    if (missingFields.length > 0) {
+      logger.error(`Missing required fields in eligibility assessment request: ${missingFields.join(', ')}`);
       return res.status(400).json({
-        error: 'Missing required fields',
-        status: 'error'
+        status: 'error',
+        message: `Missing required fields: ${missingFields.join(', ')}`,
+        missingFields: missingFields
       });
     }
     
-    // Create clientInfo object from request data
-    const clientInfo = {
-      maritalStatus,
-      age,
-      healthStatus
-    };
-    
-    // Create medicalNeeds object
-    const medicalNeeds = {
-      criticalHealth: healthStatus === 'critical'
-    };
-    
-    // Call the assessMedicaidEligibility function with the proper parameters
-    const result = await assessMedicaidEligibility(
-      clientInfo, 
-      assets, 
-      income, 
-      medicalNeeds, 
-      state, 
-      isCrisis || false
+    // Continue with processing
+    const eligibilityResult = await eligibilityService.assessEligibility(
+      clientInfo, assets, income, state
     );
     
-    if (result.status === 'error') {
-      logger.error(`Error in assessment: ${result.error}`);
-      return res.status(400).json(result);
-    }
-    
-    logger.info('Successfully completed eligibility assessment');
-    return res.status(200).json(result);
+    return res.json({
+      status: 'success',
+      data: eligibilityResult
+    });
   } catch (error) {
-    logger.error(`Unexpected error in assessEligibility controller: ${error.message}`);
+    logger.error(`Eligibility Assessment Error: ${error.message}`);
     return res.status(500).json({
-      error: 'Internal server error',
-      message: error.message,
-      status: 'error'
+      status: 'error',
+      message: `Server error: ${error.message}`
     });
   }
-}
+};
 
-/**
- * Get state-specific Medicaid rules
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-async function getStateMedicaidRules(req, res) {
+exports.getStateMedicaidRules = async (req, res) => {
   try {
     const { state } = req.params;
     
     if (!state) {
-      logger.error('State parameter is required');
       return res.status(400).json({
-        error: 'State parameter is required',
-        status: 'error'
+        status: 'error',
+        message: 'State parameter is required'
       });
     }
     
-    const rules = await getMedicaidRules(state);
+    const stateRules = await eligibilityService.getStateMedicaidRules(state);
     
-    logger.info(`Successfully retrieved rules for ${state}`);
-    return res.status(200).json({
-      state,
-      rules,
-      status: 'success'
+    return res.json({
+      status: 'success',
+      data: stateRules
     });
   } catch (error) {
-    logger.error(`Error in getStateMedicaidRules controller: ${error.message}`);
+    logger.error(`Get State Rules Error: ${error.message}`);
     return res.status(500).json({
-      error: 'Internal server error',
-      message: error.message,
-      status: 'error'
+      status: 'error',
+      message: `Server error: ${error.message}`
     });
   }
-}
-
-module.exports = {
-  assessEligibility,
-  getStateMedicaidRules
 };
