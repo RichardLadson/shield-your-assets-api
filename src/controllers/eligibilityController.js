@@ -1,9 +1,15 @@
 // src/controllers/eligibilityController.js
 const logger = require('../config/logger');
-const eligibilityService = require('../services/eligibility/eligibilityService');
+const { assessMedicaidEligibility } = require('../services/planning/eligibilityAssessment');
+const { getMedicaidRules } = require('../services/utils/medicaidRulesLoader');
 
+/**
+ * Assess eligibility based on submitted data
+ */
 exports.assessEligibility = async (req, res) => {
   try {
+    logger.info('Received eligibility assessment request');
+    
     const { clientInfo, assets, income, state } = req.body;
     
     // Collect missing required fields
@@ -31,24 +37,41 @@ exports.assessEligibility = async (req, res) => {
       });
     }
     
-    // Continue with processing
-    const eligibilityResult = await eligibilityService.assessEligibility(
-      clientInfo, assets, income, state
+    // Create medicalNeeds object
+    const medicalNeeds = {
+      criticalHealth: clientInfo.healthStatus === 'critical'
+    };
+    
+    // Call the assessMedicaidEligibility function with the proper parameters
+    const result = await assessMedicaidEligibility(
+      clientInfo, 
+      assets, 
+      income, 
+      medicalNeeds, 
+      state, 
+      clientInfo.isCrisis || false
     );
     
-    return res.json({
-      status: 'success',
-      data: eligibilityResult
-    });
+    if (result.status === 'error') {
+      logger.error(`Error in assessment: ${result.error}`);
+      return res.status(400).json(result);
+    }
+    
+    logger.info('Successfully completed eligibility assessment');
+    return res.status(200).json(result);
   } catch (error) {
-    logger.error(`Eligibility Assessment Error: ${error.message}`);
+    logger.error(`Unexpected error in assessEligibility controller: ${error.message}`);
     return res.status(500).json({
-      status: 'error',
-      message: `Server error: ${error.message}`
+      error: 'Internal server error',
+      message: error.message,
+      status: 'error'
     });
   }
 };
 
+/**
+ * Get state-specific Medicaid rules
+ */
 exports.getStateMedicaidRules = async (req, res) => {
   try {
     const { state } = req.params;
@@ -60,14 +83,16 @@ exports.getStateMedicaidRules = async (req, res) => {
       });
     }
     
-    const stateRules = await eligibilityService.getStateMedicaidRules(state);
+    const rules = await getMedicaidRules(state);
     
-    return res.json({
-      status: 'success',
-      data: stateRules
+    logger.info(`Successfully retrieved rules for ${state}`);
+    return res.status(200).json({
+      state,
+      rules,
+      status: 'success'
     });
   } catch (error) {
-    logger.error(`Get State Rules Error: ${error.message}`);
+    logger.error(`Error in getStateMedicaidRules controller: ${error.message}`);
     return res.status(500).json({
       status: 'error',
       message: `Server error: ${error.message}`
