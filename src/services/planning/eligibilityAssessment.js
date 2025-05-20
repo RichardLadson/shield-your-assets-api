@@ -1,5 +1,6 @@
 // src/services/eligibility/eligibilityAssessment.js
 const logger = require('../../config/logger');
+const medicaidRulesLoader = require('../utils/medicaidRulesLoader');
 const medicaidRules = require('../../data/medicaid_rules_2025.json');
 
 /**
@@ -139,7 +140,9 @@ async function medicaidEligibilityAssessment(clientInfo, assets, income, state) 
     const stateStr = getStateStr(state);
     logger.info(`Starting eligibility assessment for ${stateStr}`);
 
-    const rules = medicaidRules[stateStr];
+    // Use normalizeStateKey to convert abbreviations to full state names
+    const normalizedState = medicaidRulesLoader.normalizeStateKey(stateStr);
+    const rules = medicaidRules[normalizedState];
     if (!rules) {
       throw new Error(`No Medicaid rules found for state: ${stateStr}`);
     }
@@ -224,8 +227,9 @@ async function assessMedicaidEligibility(clientInfo, assets, income, medicalNeed
       totalIncome = income;
     }
     
-    // Get state-specific limits
-    const stateRules = medicaidRules[stateStr];
+    // Get state-specific limits - FIX: Use normalizeStateKey to convert abbreviations
+    const normalizedState = medicaidRulesLoader.normalizeStateKey(stateStr);
+    const stateRules = medicaidRules[normalizedState];
     if (!stateRules) {
       throw new Error(`Rules not found for state: ${stateStr}`);
     }
@@ -233,7 +237,7 @@ async function assessMedicaidEligibility(clientInfo, assets, income, medicalNeed
     // Determine limits based on marital status
     const maritalStatus = clientInfo.maritalStatus?.toLowerCase() || 'single';
     const assetLimit = maritalStatus === 'married' ? 
-      stateRules.assetLimitMarried : stateRules.assetLimitSingle;
+      stateRules.resourceLimitMarried : stateRules.resourceLimitSingle;
     
     const incomeLimit = maritalStatus === 'married' ? 
       stateRules.incomeLimitMarried : stateRules.incomeLimitSingle;

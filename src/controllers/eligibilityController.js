@@ -4,6 +4,34 @@ const { assessMedicaidEligibility } = require('../services/planning/eligibilityA
 const { getMedicaidRules } = require('../services/utils/medicaidRulesLoader');
 
 /**
+ * Standardized response formatter
+ * @param {Object|string} data - Response data
+ * @param {string} status - Response status (success or error)
+ * @returns {Object} Formatted response
+ */
+function formatResponse(data, status = 'success') {
+  // If data is a string that might be a stringified JSON, try to parse it
+  if (typeof data === 'string') {
+    try {
+      data = JSON.parse(data);
+    } catch (e) {
+      // Not valid JSON, leave as is
+    }
+  }
+  
+  // If data already has status property, return it as is
+  if (data && data.status) {
+    return data;
+  }
+  
+  // Otherwise, wrap it in a standard format
+  return {
+    status: status,
+    data: data
+  };
+}
+
+/**
  * Assess eligibility based on submitted data
  */
 exports.assessEligibility = async (req, res) => {
@@ -58,13 +86,14 @@ exports.assessEligibility = async (req, res) => {
     }
     
     logger.info('Successfully completed eligibility assessment');
-    return res.status(200).json(result);
+    
+    // Ensure consistent response format
+    return res.status(200).json(formatResponse(result));
   } catch (error) {
     logger.error(`Unexpected error in assessEligibility controller: ${error.message}`);
     return res.status(500).json({
-      error: 'Internal server error',
-      message: error.message,
-      status: 'error'
+      status: 'error',
+      message: error.message
     });
   }
 };
@@ -86,16 +115,17 @@ exports.getStateMedicaidRules = async (req, res) => {
     const rules = await getMedicaidRules(state);
     
     logger.info(`Successfully retrieved rules for ${state}`);
-    return res.status(200).json({
+    
+    // Ensure consistent response format
+    return res.status(200).json(formatResponse({
       state,
-      rules,
-      status: 'success'
-    });
+      rules
+    }));
   } catch (error) {
     logger.error(`Error in getStateMedicaidRules controller: ${error.message}`);
     return res.status(500).json({
       status: 'error',
-      message: `Server error: ${error.message}`
+      message: error.message
     });
   }
 };

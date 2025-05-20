@@ -1,3 +1,4 @@
+// src/controllers/planningController.js
 const logger = require('../config/logger');
 const { medicaidPlanning } = require('../services/planning/medicaidPlanning');
 const { medicaidAssetPlanning } = require('../services/planning/assetPlanning');
@@ -6,6 +7,34 @@ const { medicaidTrustPlanning } = require('../services/planning/trustPlanning');
 const { medicaidAnnuityPlanning } = require('../services/planning/annuityPlanning');
 const { medicaidDivestmentPlanning } = require('../services/planning/divestmentPlanning');
 const { medicaidCarePlanning } = require('../services/planning/carePlanning');
+
+/**
+ * Standardized response formatter
+ * @param {Object|string} data - Response data
+ * @param {string} status - Response status (success or error)
+ * @returns {Object} Formatted response
+ */
+function formatResponse(data, status = 'success') {
+  // If data is a string that might be a stringified JSON, try to parse it
+  if (typeof data === 'string') {
+    try {
+      data = JSON.parse(data);
+    } catch (e) {
+      // Not valid JSON, leave as is
+    }
+  }
+  
+  // If data already has status property, return it as is
+  if (data && data.status) {
+    return data;
+  }
+  
+  // Otherwise, wrap it in a standard format
+  return {
+    status: status,
+    data: data
+  };
+}
 
 exports.comprehensivePlanning = async (req, res) => {
   try {
@@ -52,21 +81,16 @@ exports.comprehensivePlanning = async (req, res) => {
     
     if (planningResult.status === 'error') {
       logger.error(`Comprehensive planning failed: ${planningResult.error}`);
-      return res.status(500).json({
-        status: 'error',
-        message: `Planning error: ${planningResult.error}`
-      });
+      return res.status(400).json(planningResult);
     }
     
-    return res.json({
-      status: 'success',
-      data: planningResult
-    });
+    // Ensure consistent response format
+    return res.status(200).json(formatResponse(planningResult));
   } catch (error) {
     logger.error(`Comprehensive Planning Error: ${error.message}`);
     return res.status(500).json({
       status: 'error',
-      message: `Server error: ${error.message}`
+      message: error.message
     });
   }
 };
@@ -96,21 +120,16 @@ exports.assetPlanning = async (req, res) => {
     
     if (planningResult.status === 'error') {
       logger.error(`Asset planning failed: ${planningResult.error}`);
-      return res.status(500).json({
-        status: 'error',
-        message: `Planning error: ${planningResult.error}`
-      });
+      return res.status(400).json(planningResult);
     }
     
-    return res.json({
-      status: 'success',
-      data: planningResult
-    });
+    // Ensure consistent response format
+    return res.status(200).json(formatResponse(planningResult));
   } catch (error) {
     logger.error(`Asset Planning Error: ${error.message}`);
     return res.status(500).json({
       status: 'error',
-      message: `Server error: ${error.message}`
+      message: error.message
     });
   }
 };
@@ -139,21 +158,16 @@ exports.incomePlanning = async (req, res) => {
     
     if (planningResult.status === 'error') {
       logger.error(`Income planning failed: ${planningResult.error}`);
-      return res.status(500).json({
-        status: 'error',
-        message: `Planning error: ${planningResult.error}`
-      });
+      return res.status(400).json(planningResult);
     }
     
-    return res.json({
-      status: 'success',
-      data: planningResult
-    });
+    // Ensure consistent response format
+    return res.status(200).json(formatResponse(planningResult));
   } catch (error) {
     logger.error(`Income Planning Error: ${error.message}`);
     return res.status(500).json({
       status: 'error',
-      message: `Server error: ${error.message}`
+      message: error.message
     });
   }
 };
@@ -184,21 +198,16 @@ exports.trustPlanning = async (req, res) => {
     
     if (planningResult.status === 'error') {
       logger.error(`Trust planning failed: ${planningResult.error}`);
-      return res.status(500).json({
-        status: 'error',
-        message: `Planning error: ${planningResult.error}`
-      });
+      return res.status(400).json(planningResult);
     }
     
-    return res.json({
-      status: 'success',
-      data: planningResult
-    });
+    // Ensure consistent response format
+    return res.status(200).json(formatResponse(planningResult));
   } catch (error) {
     logger.error(`Trust Planning Error: ${error.message}`);
     return res.status(500).json({
       status: 'error',
-      message: `Server error: ${error.message}`
+      message: error.message
     });
   }
 };
@@ -227,21 +236,16 @@ exports.annuityPlanning = async (req, res) => {
     
     if (planningResult.status === 'error') {
       logger.error(`Annuity planning failed: ${planningResult.error}`);
-      return res.status(500).json({
-        status: 'error',
-        message: `Planning error: ${planningResult.error}`
-      });
+      return res.status(400).json(planningResult);
     }
     
-    return res.json({
-      status: 'success',
-      data: planningResult
-    });
+    // Ensure consistent response format
+    return res.status(200).json(formatResponse(planningResult));
   } catch (error) {
     logger.error(`Annuity Planning Error: ${error.message}`);
     return res.status(500).json({
       status: 'error',
-      message: `Server error: ${error.message}`
+      message: error.message
     });
   }
 };
@@ -270,21 +274,16 @@ exports.divestmentPlanning = async (req, res) => {
     
     if (planningResult.status === 'error') {
       logger.error(`Divestment planning failed: ${planningResult.error}`);
-      return res.status(500).json({
-        status: 'error',
-        message: `Planning error: ${planningResult.error}`
-      });
+      return res.status(400).json(planningResult);
     }
     
-    return res.json({
-      status: 'success',
-      data: planningResult
-    });
+    // Ensure consistent response format
+    return res.status(200).json(formatResponse(planningResult));
   } catch (error) {
     logger.error(`Divestment Planning Error: ${error.message}`);
     return res.status(500).json({
       status: 'error',
-      message: `Server error: ${error.message}`
+      message: error.message
     });
   }
 };
@@ -314,21 +313,16 @@ exports.carePlanning = async (req, res) => {
     
     if (planningResult.status === 'error') {
       logger.error(`Care planning failed: ${planningResult.error}`);
-      return res.status(500).json({
-        status: 'error',
-        message: `Planning error: ${planningResult.error}`
-      });
+      return res.status(400).json(planningResult);
     }
     
-    return res.json({
-      status: 'success',
-      data: planningResult
-    });
+    // Ensure consistent response format
+    return res.status(200).json(formatResponse(planningResult));
   } catch (error) {
     logger.error(`Care Planning Error: ${error.message}`);
     return res.status(500).json({
       status: 'error',
-      message: `Server error: ${error.message}`
+      message: error.message
     });
   }
 };

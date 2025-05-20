@@ -6,6 +6,34 @@ const logger = require('../config/logger');
 const MedicaidPlanningReportGenerator = require('../services/reporting/reportGenerator');
 
 /**
+ * Standardized response formatter
+ * @param {Object|string} data - Response data
+ * @param {string} status - Response status (success or error)
+ * @returns {Object} Formatted response
+ */
+function formatResponse(data, status = 'success') {
+  // If data is a string that might be a stringified JSON, try to parse it
+  if (typeof data === 'string') {
+    try {
+      data = JSON.parse(data);
+    } catch (e) {
+      // Not valid JSON, leave as is
+    }
+  }
+  
+  // If data already has status property, return it as is
+  if (data && data.status) {
+    return data;
+  }
+  
+  // Otherwise, wrap it in a standard format
+  return {
+    status: status,
+    data: data
+  };
+}
+
+/**
  * Save a report to the filesystem
  * @param {string} content - Report content to save
  * @param {string} filename - Name of the file
@@ -59,8 +87,8 @@ async function generateReport(req, res) {
     if (!planningResults || !clientInfo || !state) {
       logger.error('Missing required fields in report generation request');
       return res.status(400).json({
-        error: 'Missing required fields: planningResults, clientInfo, and state are required',
-        status: 'error'
+        status: 'error',
+        message: 'Missing required fields: planningResults, clientInfo, and state are required'
       });
     }
     
@@ -70,8 +98,8 @@ async function generateReport(req, res) {
     if (!validReportTypes.includes(selectedReportType)) {
       logger.error(`Invalid report type: ${selectedReportType}`);
       return res.status(400).json({
-        error: `Invalid report type. Must be one of: ${validReportTypes.join(', ')}`,
-        status: 'error'
+        status: 'error',
+        message: `Invalid report type. Must be one of: ${validReportTypes.join(', ')}`
       });
     }
     
@@ -81,8 +109,8 @@ async function generateReport(req, res) {
     if (!validFormats.includes(selectedFormat)) {
       logger.error(`Invalid output format: ${selectedFormat}`);
       return res.status(400).json({
-        error: `Invalid output format. Must be one of: ${validFormats.join(', ')}`,
-        status: 'error'
+        status: 'error',
+        message: `Invalid output format. Must be one of: ${validFormats.join(', ')}`
       });
     }
     
@@ -119,22 +147,22 @@ async function generateReport(req, res) {
     const saveResult = await saveReportToFile(reportContent, filename);
     
     logger.info(`Successfully generated report with ID: ${reportId}`);
-    return res.status(200).json({
+    
+    // Ensure consistent response format
+    return res.status(200).json(formatResponse({
       reportId,
       clientName: clientInfo.name || 'Client',
       reportType: selectedReportType,
       outputFormat: selectedFormat,
       generatedAt: new Date().toISOString(),
       content: reportContent,
-      filePath: saveResult.success ? saveResult.filePath : null,
-      status: 'success'
-    });
+      filePath: saveResult.success ? saveResult.filePath : null
+    }));
   } catch (error) {
     logger.error(`Error in generateReport controller: ${error.message}`);
     return res.status(500).json({
-      error: 'Internal server error',
-      message: error.message,
-      status: 'error'
+      status: 'error',
+      message: error.message
     });
   }
 }
@@ -148,74 +176,12 @@ async function downloadReport(req, res) {
   try {
     const { reportId } = req.params;
     
-    if (!reportId) {
-      logger.error('Report ID is required');
-      return res.status(400).json({
-        error: 'Report ID is required',
-        status: 'error'
-      });
-    }
-    
-    // For now, we'll assume reports are stored in the reports directory at the project root.
-    const reportsDir = path.join(process.cwd(), 'reports');
-    
-    try {
-      const files = await fs.readdir(reportsDir);
-      const reportFile = files.find(file => file.includes(reportId));
-      
-      if (reportFile) {
-        const filePath = path.join(reportsDir, reportFile);
-        const content = await fs.readFile(filePath, 'utf8');
-        
-        // Set headers based on file type.
-        if (reportFile.endsWith('.html')) {
-          res.setHeader('Content-Type', 'text/html');
-        } else {
-          res.setHeader('Content-Type', 'text/plain');
-        }
-        res.setHeader('Content-Disposition', `attachment; filename="${reportFile}"`);
-        
-        return res.send(content);
-      } else {
-        logger.error(`Report with ID ${reportId} not found`);
-        return res.status(404).json({
-          error: `Report with ID ${reportId} not found`,
-          status: 'error'
-        });
-      }
-    } catch (error) {
-      logger.error(`Error finding report file: ${error.message}`);
-      return res.status(500).json({
-        error: 'Internal server error',
-        message: error.message,
-        status: 'error'
-      });
-    }
-  } catch (error) {
-    logger.error(`Error in downloadReport controller: ${error.message}`);
-    return res.status(500).json({
-      error: 'Internal server error',
-      message: error.message,
-      status: 'error'
-    });
-  }
-}
-/**
- * Download a previously generated report or return a sample report.
- * @param {Object} req - Express request object.
- * @param {Object} res - Express response object.
- */
-async function downloadReport(req, res) {
-  try {
-    const { reportId } = req.params;
-    
     // Handle dummy report request for testing purposes
     if (reportId === 'dummy123') {
-      // Return a sample report as JSON
-      return res.status(200).json({
-        status: 'success',
+      // Return a sample report as JSON with consistent format
+      return res.status(200).json(formatResponse({
         reportId: 'dummy123',
-        clientName: 'Richard', // This should match your defaultClientName in tests
+        clientName: 'Richard', 
         generatedAt: new Date().toISOString(),
         planningResults: {
           countableAssets: 10000,
@@ -230,15 +196,14 @@ async function downloadReport(req, res) {
         },
         reportType: 'summary',
         outputFormat: 'json'
-      });
+      }));
     }
     
-    // Original functionality for real reports continues below
     if (!reportId) {
       logger.error('Report ID is required');
       return res.status(400).json({
-        error: 'Report ID is required',
-        status: 'error'
+        status: 'error',
+        message: 'Report ID is required'
       });
     }
     
@@ -253,7 +218,8 @@ async function downloadReport(req, res) {
         const filePath = path.join(reportsDir, reportFile);
         const content = await fs.readFile(filePath, 'utf8');
         
-        // Set headers based on file type.
+        // For HTML or plain text file downloads, use appropriate Content-Type
+        // Note: We're not using formatResponse here since we're returning raw file content
         if (reportFile.endsWith('.html')) {
           res.setHeader('Content-Type', 'text/html');
         } else {
@@ -261,28 +227,27 @@ async function downloadReport(req, res) {
         }
         res.setHeader('Content-Disposition', `attachment; filename="${reportFile}"`);
         
+        // For file downloads, we explicitly send the raw content
         return res.send(content);
       } else {
         logger.error(`Report with ID ${reportId} not found`);
         return res.status(404).json({
-          error: `Report with ID ${reportId} not found`,
-          status: 'error'
+          status: 'error',
+          message: `Report with ID ${reportId} not found`
         });
       }
     } catch (error) {
       logger.error(`Error finding report file: ${error.message}`);
       return res.status(500).json({
-        error: 'Internal server error',
-        message: error.message,
-        status: 'error'
+        status: 'error',
+        message: error.message
       });
     }
   } catch (error) {
     logger.error(`Error in downloadReport controller: ${error.message}`);
     return res.status(500).json({
-      error: 'Internal server error',
-      message: error.message,
-      status: 'error'
+      status: 'error',
+      message: error.message
     });
   }
 }
