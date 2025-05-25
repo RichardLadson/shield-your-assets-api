@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const logger = require('./config/logger');
 const config = require('./config/config');
+const { requestTransformer, responseTransformer } = require('./middleware/dataTransformer');
 
 // Initialize express app
 const app = express();
@@ -27,6 +28,8 @@ app.use((req, res, next) => {
 // Continue with other middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(requestTransformer);
+app.use(responseTransformer);
 
 // Logging middleware
 app.use((req, res, next) => {

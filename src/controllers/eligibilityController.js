@@ -38,17 +38,22 @@ exports.assessEligibility = async (req, res) => {
   try {
     logger.info('Received eligibility assessment request');
     
-    const { clientInfo, assets, income, state } = req.body;
+    // ADD THESE DEBUG LINES
+    console.log('📥 Received body keys:', Object.keys(req.body));
+    console.log('📥 Full body:', JSON.stringify(req.body, null, 2));
+    
+    // Use snake_case from the transformed request
+    const { client_info, assets, income, state } = req.body;
     
     // Collect missing required fields
     const missingFields = [];
     
-    if (!clientInfo) {
-      missingFields.push('clientInfo');
+    if (!client_info) {
+      missingFields.push('client_info');
     } else {
-      if (!clientInfo.name) missingFields.push('clientInfo.name');
-      if (clientInfo.age === undefined) missingFields.push('clientInfo.age');
-      if (!clientInfo.maritalStatus) missingFields.push('clientInfo.maritalStatus');
+      if (!client_info.name) missingFields.push('client_info.name');
+      if (client_info.age === undefined) missingFields.push('client_info.age');
+      if (!client_info.marital_status) missingFields.push('client_info.marital_status');
     }
     
     if (!state) missingFields.push('state');
@@ -65,9 +70,18 @@ exports.assessEligibility = async (req, res) => {
       });
     }
     
-    // Create medicalNeeds object
+    // Create medicalNeeds object - use snake_case
     const medicalNeeds = {
-      criticalHealth: clientInfo.healthStatus === 'critical'
+      criticalHealth: client_info.health_status === 'critical'
+    };
+    
+    // Convert back to camelCase for the service function
+    const clientInfo = {
+      name: client_info.name,
+      age: client_info.age,
+      maritalStatus: client_info.marital_status,
+      healthStatus: client_info.health_status,
+      isCrisis: client_info.is_crisis || false
     };
     
     // Call the assessMedicaidEligibility function with the proper parameters
