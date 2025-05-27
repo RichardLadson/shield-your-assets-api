@@ -38,17 +38,31 @@ function formatResponse(data, status = 'success') {
 
 exports.comprehensivePlanning = async (req, res) => {
   try {
-    const { clientInfo, assets, income, expenses, medicalInfo, livingInfo, state } = req.body;
+    // Add detailed debugging
+    logger.info('📥 Planning controller received request');
+    logger.info('📥 Request body keys:', Object.keys(req.body));
+    logger.info('📥 Full request body: ' + JSON.stringify(req.body, null, 2));
+    
+    const { client_info, assets, income, expenses, medical_info, living_info, state } = req.body;
+    
+    // Log what we extracted
+    logger.info('📊 Extracted fields:', {
+      hasClientInfo: !!client_info,
+      hasAssets: !!assets,
+      hasIncome: !!income,
+      hasState: !!state,
+      clientInfoKeys: client_info ? Object.keys(client_info) : 'null'
+    });
     
     // Collect missing required fields
     const missingFields = [];
     
-    if (!clientInfo) {
-      missingFields.push('clientInfo');
+    if (!client_info) {
+      missingFields.push('client_info');
     } else {
-      if (!clientInfo.name) missingFields.push('clientInfo.name');
-      if (clientInfo.age === undefined) missingFields.push('clientInfo.age');
-      if (!clientInfo.maritalStatus) missingFields.push('clientInfo.maritalStatus');
+      if (!client_info.name) missingFields.push('client_info.name');
+      if (client_info.age === undefined) missingFields.push('client_info.age');
+      if (!client_info.marital_status) missingFields.push('client_info.marital_status');
     }
     
     if (!state) missingFields.push('state');
@@ -66,16 +80,16 @@ exports.comprehensivePlanning = async (req, res) => {
     }
     
     // Log the start of planning
-    logger.info(`Starting comprehensive planning for ${clientInfo.name} in ${state}`);
+    logger.info(`Starting comprehensive planning for ${client_info.name} in ${state}`);
     
     // Call the comprehensive planning function
     const planningResult = await medicaidPlanning(
-      clientInfo, 
+      client_info, 
       assets, 
       income, 
       expenses || {}, 
-      medicalInfo || {}, 
-      livingInfo || {}, 
+      medical_info || {}, 
+      living_info || {}, 
       state
     );
     
@@ -97,11 +111,11 @@ exports.comprehensivePlanning = async (req, res) => {
 
 exports.assetPlanning = async (req, res) => {
   try {
-    const { clientInfo, assets, state } = req.body;
+    const { client_info, assets, state } = req.body;
     
     // Validate required fields
     const missingFields = [];
-    if (!clientInfo) missingFields.push('clientInfo');
+    if (!client_info) missingFields.push('client_info');
     if (!assets || Object.keys(assets).length === 0) missingFields.push('assets');
     if (!state) missingFields.push('state');
     
@@ -114,9 +128,9 @@ exports.assetPlanning = async (req, res) => {
       });
     }
     
-    logger.info(`Starting asset planning for ${clientInfo.name} in ${state}`);
+    logger.info(`Starting asset planning for ${client_info.name} in ${state}`);
     
-    const planningResult = await medicaidAssetPlanning(clientInfo, assets, {}, {}, {}, state);
+    const planningResult = await medicaidAssetPlanning(client_info, assets, {}, {}, {}, state);
     
     if (planningResult.status === 'error') {
       logger.error(`Asset planning failed: ${planningResult.error}`);
@@ -136,10 +150,10 @@ exports.assetPlanning = async (req, res) => {
 
 exports.incomePlanning = async (req, res) => {
   try {
-    const { clientInfo, income, expenses, state } = req.body;
+    const { client_info, income, expenses, state } = req.body;
     
     const missingFields = [];
-    if (!clientInfo) missingFields.push('clientInfo');
+    if (!client_info) missingFields.push('client_info');
     if (!income || Object.keys(income).length === 0) missingFields.push('income');
     if (!state) missingFields.push('state');
     
@@ -152,9 +166,9 @@ exports.incomePlanning = async (req, res) => {
       });
     }
     
-    logger.info(`Starting income planning for ${clientInfo.name} in ${state}`);
+    logger.info(`Starting income planning for ${client_info.name} in ${state}`);
     
-    const planningResult = await medicaidIncomePlanning(clientInfo, income, expenses || {}, state);
+    const planningResult = await medicaidIncomePlanning(client_info, income, expenses || {}, state);
     
     if (planningResult.status === 'error') {
       logger.error(`Income planning failed: ${planningResult.error}`);
@@ -174,13 +188,13 @@ exports.incomePlanning = async (req, res) => {
 
 exports.trustPlanning = async (req, res) => {
   try {
-    const { clientInfo, assets, income, eligibilityResults, state } = req.body;
+    const { client_info, assets, income, eligibility_results, state } = req.body;
     
     const missingFields = [];
-    if (!clientInfo) missingFields.push('clientInfo');
+    if (!client_info) missingFields.push('client_info');
     if (!assets || Object.keys(assets).length === 0) missingFields.push('assets');
     if (!income || Object.keys(income).length === 0) missingFields.push('income');
-    if (!eligibilityResults) missingFields.push('eligibilityResults');
+    if (!eligibility_results) missingFields.push('eligibility_results');
     if (!state) missingFields.push('state');
     
     if (missingFields.length > 0) {
@@ -192,9 +206,9 @@ exports.trustPlanning = async (req, res) => {
       });
     }
     
-    logger.info(`Starting trust planning for ${clientInfo.name} in ${state}`);
+    logger.info(`Starting trust planning for ${client_info.name} in ${state}`);
     
-    const planningResult = await medicaidTrustPlanning(clientInfo, assets, income, eligibilityResults, state);
+    const planningResult = await medicaidTrustPlanning(client_info, assets, income, eligibility_results, state);
     
     if (planningResult.status === 'error') {
       logger.error(`Trust planning failed: ${planningResult.error}`);
@@ -214,10 +228,10 @@ exports.trustPlanning = async (req, res) => {
 
 exports.annuityPlanning = async (req, res) => {
   try {
-    const { clientInfo, assets, income, eligibilityStatus, state } = req.body;
+    const { client_info, assets, income, eligibility_status, state } = req.body;
     
     const missingFields = [];
-    if (!clientInfo) missingFields.push('clientInfo');
+    if (!client_info) missingFields.push('client_info');
     if (!assets || Object.keys(assets).length === 0) missingFields.push('assets');
     if (!state) missingFields.push('state');
     
@@ -230,9 +244,9 @@ exports.annuityPlanning = async (req, res) => {
       });
     }
     
-    logger.info(`Starting annuity planning for ${clientInfo.name} in ${state}`);
+    logger.info(`Starting annuity planning for ${client_info.name} in ${state}`);
     
-    const planningResult = await medicaidAnnuityPlanning(clientInfo, assets, income || {}, eligibilityStatus || {}, state);
+    const planningResult = await medicaidAnnuityPlanning(client_info, assets, income || {}, eligibility_status || {}, state);
     
     if (planningResult.status === 'error') {
       logger.error(`Annuity planning failed: ${planningResult.error}`);
@@ -252,10 +266,10 @@ exports.annuityPlanning = async (req, res) => {
 
 exports.divestmentPlanning = async (req, res) => {
   try {
-    const { clientInfo, assets, pastTransfers, state } = req.body;
+    const { client_info, assets, past_transfers, state } = req.body;
     
     const missingFields = [];
-    if (!clientInfo) missingFields.push('clientInfo');
+    if (!client_info) missingFields.push('client_info');
     if (!assets || Object.keys(assets).length === 0) missingFields.push('assets');
     if (!state) missingFields.push('state');
     
@@ -268,9 +282,9 @@ exports.divestmentPlanning = async (req, res) => {
       });
     }
     
-    logger.info(`Starting divestment planning for ${clientInfo.name} in ${state}`);
+    logger.info(`Starting divestment planning for ${client_info.name} in ${state}`);
     
-    const planningResult = await medicaidDivestmentPlanning(clientInfo, assets, pastTransfers || [], state);
+    const planningResult = await medicaidDivestmentPlanning(client_info, assets, past_transfers || [], state);
     
     if (planningResult.status === 'error') {
       logger.error(`Divestment planning failed: ${planningResult.error}`);
@@ -290,12 +304,12 @@ exports.divestmentPlanning = async (req, res) => {
 
 exports.carePlanning = async (req, res) => {
   try {
-    const { clientInfo, medicalInfo, livingInfo, state } = req.body;
+    const { client_info, medical_info, living_info, state } = req.body;
     
     const missingFields = [];
-    if (!clientInfo) missingFields.push('clientInfo');
-    if (!medicalInfo) missingFields.push('medicalInfo');
-    if (!livingInfo) missingFields.push('livingInfo');
+    if (!client_info) missingFields.push('client_info');
+    if (!medical_info) missingFields.push('medical_info');
+    if (!living_info) missingFields.push('living_info');
     if (!state) missingFields.push('state');
     
     if (missingFields.length > 0) {
@@ -307,9 +321,9 @@ exports.carePlanning = async (req, res) => {
       });
     }
     
-    logger.info(`Starting care planning for ${clientInfo.name} in ${state}`);
+    logger.info(`Starting care planning for ${client_info.name} in ${state}`);
     
-    const planningResult = await medicaidCarePlanning(clientInfo, medicalInfo, livingInfo, state);
+    const planningResult = await medicaidCarePlanning(client_info, medical_info, living_info, state);
     
     if (planningResult.status === 'error') {
       logger.error(`Care planning failed: ${planningResult.error}`);

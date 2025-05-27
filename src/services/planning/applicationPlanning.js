@@ -27,7 +27,7 @@ function prepareApplicationTimeline(planningResults, clientInfo, state) {
     },
     applicationSubmission: '',
     processingPhase: {
-      typicalTimeframe: rules.applicationProcessing.typicalTimeframe,
+      typicalTimeframe: rules.applicationProcessing?.typicalTimeframe || '45-90 days',
       followUpSteps: []
     }
   };
@@ -84,7 +84,7 @@ function prepareApplicationTimeline(planningResults, clientInfo, state) {
 
   // Submission instructions
   let submission = 'Submit application';
-  if (rules.applicationProcessing.requiredFaceToFace) {
+  if (rules.applicationProcessing?.requiredFaceToFace) {
     submission += ' after a face-to-face interview';
   }
   timeline.applicationSubmission = submission;

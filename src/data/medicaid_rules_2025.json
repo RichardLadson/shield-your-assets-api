@@ -60,16 +60,16 @@
     "monthlyMaintenanceNeedsAllowanceMax": 3277.5
   },
   "california": {
-    "resourceLimitSingle": null,
-    "resourceLimitMarried": null,
+    "resourceLimitSingle": 2000,
+    "resourceLimitMarried": 3000,
     "incomeLimitSingle": 1801,
     "incomeLimitMarried": 2433,
-    "nursingHomeIncomeLimitSingle": null,
-    "nursingHomeIncomeLimitMarried": null,
+    "nursingHomeIncomeLimitSingle": 2901,
+    "nursingHomeIncomeLimitMarried": 5802,
     "monthlyPersonalNeedsAllowance": 35,
     "communitySpouseResourceAllowanceMin": 31584,
     "communitySpouseResourceAllowanceMax": 157920,
-    "homeEquityLimit": null,
+    "homeEquityLimit": 730000,
     "averageNursingHomeCost": 12046,
     "monthlyMaintenanceNeedsAllowanceMin": 3948,
     "monthlyMaintenanceNeedsAllowanceMax": 3948

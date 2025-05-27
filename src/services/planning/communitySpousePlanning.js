@@ -15,13 +15,16 @@ const medicaidRules = require('../../data/medicaid_rules_2025.json');
 function assessCommunitySpouseNeeds(clientInfo, assets, income, expenses, state) {
   logger.debug(`Assessing community spouse needs for state ${state}`);
 
-  // Check if client is married with a community spouse
-  if (clientInfo.maritalStatus !== 'married' || !clientInfo.spouseInfo) {
+  // Check if client is married
+  if (clientInfo.maritalStatus !== 'married') {
     return {
       hasCommunitySpoue: false,
-      message: 'Client is not married or has no community spouse'
+      message: 'Client is not married'
     };
   }
+  
+  // Default spouse info if not provided
+  const spouseInfo = clientInfo.spouseInfo || {};
 
   // Get state rules
   const rules = medicaidRules[state.toLowerCase()];
@@ -29,22 +32,25 @@ function assessCommunitySpouseNeeds(clientInfo, assets, income, expenses, state)
     throw new Error(`No Medicaid rules found for state: ${state}`);
   }
 
+  // Ensure expenses object exists with defaults
+  const safeExpenses = expenses || {};
+  
   // Basic spouse needs assessment
   const spouseNeeds = {
-    housingCosts: expenses.housing + (expenses.utilities || 0),
-    incomeGap: calculateIncomeGap(income, expenses, state, rules),
+    housingCosts: (safeExpenses.housing || 0) + (safeExpenses.utilities || 0),
+    incomeGap: calculateIncomeGap(income, safeExpenses, state, rules),
     needsIncomeAllowance: true,
     medicalNeeds: {
-      highMedicalExpenses: (expenses.medical || 0) > 500
+      highMedicalExpenses: (safeExpenses.medical || 0) > 500
     }
   };
 
   // Add properties expected by tests
-  const housingCosts = expenses.housing + (expenses.utilities || 0);
+  const housingCosts = (safeExpenses.housing || 0) + (safeExpenses.utilities || 0);
   const excessShelterStandard = (rules.monthlyMaintenanceNeedsAllowanceMin || 2000) / 3;
   const excessShelterAmount = Math.max(0, housingCosts - excessShelterStandard);
 
-  if (clientInfo.spouseInfo.age > 80) {
+  if (spouseInfo.age && spouseInfo.age > 80) {
     spouseNeeds.specialConsiderations = ['elderly spouse requires additional support'];
   }
 
@@ -57,7 +63,7 @@ function assessCommunitySpouseNeeds(clientInfo, assets, income, expenses, state)
     excessShelterAmount,
     medicalNeeds: spouseNeeds.medicalNeeds,
     needsIncomeAllowance: true,
-    specialConsiderations: clientInfo.spouseInfo.age > 80 ? 
+    specialConsiderations: spouseInfo.age && spouseInfo.age > 80 ? 
       ['elderly spouse requires additional support'] : []
   };
 

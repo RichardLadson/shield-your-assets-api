@@ -39,10 +39,10 @@ function assessEligibility(clientInfo, assets, income, state, rules) {
   const maritalStatus = clientInfo.maritalStatus?.toLowerCase() || "single";
 
   const resourceLimit =
-    maritalStatus === "married" ? rules.assetLimitMarried : rules.assetLimitSingle;
+    maritalStatus === "married" ? (rules.resourceLimitMarried || rules.assetLimitMarried) : (rules.resourceLimitSingle || rules.assetLimitSingle);
 
   const incomeLimit =
-    maritalStatus === "married" ? rules.incomeLimitMarried : rules.incomeLimitSingle;
+    maritalStatus === "married" ? (rules.incomeLimitMarried || rules.nursingHomeIncomeLimitMarried) : (rules.incomeLimitSingle || rules.nursingHomeIncomeLimitSingle);
 
   if (typeof resourceLimit !== "number" || typeof incomeLimit !== "number") {
     throw new Error(`Missing asset or income limits for ${stateStr}`);

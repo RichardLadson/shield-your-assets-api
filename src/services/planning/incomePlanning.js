@@ -170,41 +170,218 @@ async function calculateShareOfCost(incomeSituation, expenses, state, rules) {
  * 
  * @param {Object} incomeSituation - Income assessment from assessIncomeSituation
  * @param {number} shareOfCost - Calculated share of cost
- * @returns {Array<string>} Income planning strategies
+ * @returns {Array<Object>} Income planning strategy objects
  */
 function determineIncomeStrategies(incomeSituation, shareOfCost) {
   logger.debug('Determining income strategies');
   
   const strategies = [];
+  let strategyId = 1;
   
-  strategies.push('Document all income sources with verification');
-  strategies.push('Report any changes in income promptly');
+  // Always document income
+  strategies.push({
+    id: `income-${strategyId++}`,
+    type: 'documentation',
+    name: 'Income Documentation & Reporting',
+    description: 'Maintain complete records of all income sources with verification and report changes promptly.',
+    pros: [
+      'Ensures accurate eligibility determination',
+      'Prevents overpayments and penalties',
+      'Simplifies renewal process',
+      'Protects against disputes'
+    ],
+    cons: [
+      'Requires ongoing record-keeping',
+      'Monthly reporting obligations',
+      'Documentation burden',
+      'Penalties for non-compliance'
+    ],
+    effectiveness: 'Required',
+    timing: 'Ongoing requirement',
+    estimatedCost: '$0',
+    monthlyImpact: 'Maintains compliance'
+  });
   
   if (incomeSituation.isIncomeCapState && incomeSituation.exceedsLimit) {
-    strategies.push('Consider Qualified Income Trust (Miller Trust)');
-    strategies.push('Set up dedicated trust account for excess income');
+    strategies.push({
+      id: `income-${strategyId++}`,
+      type: 'miller-trust',
+      name: 'Qualified Income Trust (Miller Trust)',
+      description: `Establish a Miller Trust to qualify in ${incomeSituation.state}\'s income cap state despite income of $${incomeSituation.totalIncome}/month exceeding the $${incomeSituation.incomeLimit} limit.`,
+      pros: [
+        'Enables Medicaid eligibility despite excess income',
+        'Required in income cap states',
+        'Clear legal framework',
+        'Protects income flow for care'
+      ],
+      cons: [
+        'All income must flow through trust',
+        'Requires trustee and administration',
+        'Bank account management required',
+        'State receives remainder at death'
+      ],
+      effectiveness: 'Essential',
+      timing: 'Must establish before application',
+      estimatedCost: '$1,500-$2,500 setup',
+      monthlyImpact: `Qualifies despite $${(incomeSituation.totalIncome - incomeSituation.incomeLimit).toFixed(0)} excess income`,
+      specificActions: [
+        'Hire elder law attorney for trust drafting',
+        'Select trustee (can be family member)',
+        'Open dedicated trust bank account',
+        'Route all income through trust',
+        'Pay allowable expenses from trust'
+      ]
+    });
   }
   
   if (!incomeSituation.isIncomeCapState && incomeSituation.exceedsLimit) {
-    strategies.push('Plan for income spend-down on allowable expenses');
-    strategies.push('Track and document all qualifying expenses');
+    strategies.push({
+      id: `income-${strategyId++}`,
+      type: 'spend-down',
+      name: 'Income Spend-Down Strategy',
+      description: `Plan systematic spend-down of $${shareOfCost}/month share of cost on allowable medical expenses.`,
+      pros: [
+        'Achieves eligibility each month',
+        'Flexible expense categories',
+        'Can pre-pay some expenses',
+        'No trust required'
+      ],
+      cons: [
+        'Must track expenses carefully',
+        'Monthly burden to meet spend-down',
+        'Receipts required for all expenses',
+        'Coverage gaps until met'
+      ],
+      effectiveness: 'High',
+      timing: 'Monthly requirement',
+      estimatedCost: `$${shareOfCost}/month in medical expenses`,
+      monthlyImpact: 'Full Medicaid after spend-down',
+      specificActions: [
+        'Track all medical expenses',
+        'Save receipts for prescriptions',
+        'Document doctor visit copays',
+        'Consider dental work timing',
+        'Pre-pay allowable services'
+      ]
+    });
   }
   
   if (shareOfCost > 1500) {
-    strategies.push('Explore ways to increase allowable deductions');
-    strategies.push('Consider increasing health insurance premiums');
-    strategies.push('Document and submit all uncovered medical expenses');
-  } else if (shareOfCost <= 500) {
-    strategies.push('Review spend-down opportunities, such as pre-paid funeral or home modifications');
+    strategies.push({
+      id: `income-${strategyId++}`,
+      type: 'deduction-maximization',
+      name: 'Deduction Maximization Strategy',
+      description: 'Increase allowable deductions to reduce high share of cost burden.',
+      pros: [
+        'Reduces monthly out-of-pocket',
+        'Legal and compliant method',
+        'Can be adjusted over time',
+        'Multiple deduction categories'
+      ],
+      cons: [
+        'May require spending on premiums',
+        'Documentation intensive',
+        'Not all expenses qualify',
+        'State-specific rules'
+      ],
+      effectiveness: 'Medium-High',
+      timing: 'Implement before application',
+      estimatedCost: 'Varies by deduction type',
+      monthlyImpact: `Reduce SOC from $${shareOfCost} by up to 50%`,
+      specificActions: [
+        'Increase health insurance premiums',
+        'Purchase Medicare supplemental coverage',
+        'Document all uncovered medical expenses',
+        'Consider dental/vision insurance',
+        'Review guardian/conservator fees'
+      ]
+    });
+  } else if (shareOfCost > 0 && shareOfCost <= 500) {
+    strategies.push({
+      id: `income-${strategyId++}`,
+      type: 'minimal-spend-down',
+      name: 'Minimal Spend-Down Management',
+      description: `Manage modest $${shareOfCost}/month share of cost through routine medical expenses.`,
+      pros: [
+        'Low monthly burden',
+        'Often met through regular care',
+        'Simple documentation',
+        'Predictable costs'
+      ],
+      cons: [
+        'Must track even small expenses',
+        'Monthly requirement',
+        'No coverage until met',
+        'Receipts required'
+      ],
+      effectiveness: 'High',
+      timing: 'Monthly',
+      estimatedCost: `$${shareOfCost}/month`,
+      monthlyImpact: 'Full coverage after spend-down',
+      specificActions: [
+        'Use prescription costs first',
+        'Time medical appointments',
+        'Save all medical receipts',
+        'Consider OTC medical supplies',
+        'Pre-pay when allowed'
+      ]
+    });
   }
   
   if (incomeSituation.maritalStatus === 'married') {
-    strategies.push('Analyze spousal income allowance');
-    strategies.push('Optimize income allocation between spouses');
+    strategies.push({
+      id: `income-${strategyId++}`,
+      type: 'spousal-allocation',
+      name: 'Spousal Income Allocation',
+      description: 'Optimize income allocation between spouses to minimize share of cost and protect community spouse income.',
+      pros: [
+        'Protects at-home spouse income',
+        'Can reduce or eliminate SOC',
+        'Federal protection available',
+        'Can be adjusted over time'
+      ],
+      cons: [
+        'Complex calculations',
+        'State variations in rules',
+        'May require fair hearing',
+        'Documentation intensive'
+      ],
+      effectiveness: 'High',
+      timing: 'At application',
+      estimatedCost: '$0-$2,000 for legal help',
+      monthlyImpact: 'Protects spousal income needs'
+    });
     
     if (shareOfCost > 1000) {
-      strategies.push('Evaluate spousal maintenance needs');
-      strategies.push('Consider fair hearing for increased MMNA if needed');
+      strategies.push({
+        id: `income-${strategyId++}`,
+        type: 'mmna-increase',
+        name: 'MMNA Fair Hearing Request',
+        description: 'Request administrative hearing to increase Monthly Maintenance Needs Allowance for community spouse.',
+        pros: [
+          'Can significantly increase spousal allowance',
+          'Due process protection',
+          'Based on actual expenses',
+          'Retroactive if approved'
+        ],
+        cons: [
+          'Requires documentation of need',
+          'Legal representation recommended',
+          'Time-consuming process',
+          'Not guaranteed approval'
+        ],
+        effectiveness: 'Medium-High',
+        timing: '2-3 months for hearing',
+        estimatedCost: '$2,000-$5,000 legal fees',
+        monthlyImpact: `Could reduce SOC by $${Math.min(shareOfCost, 1500)}+`,
+        specificActions: [
+          'Document all household expenses',
+          'Gather utility bills and receipts',
+          'Obtain legal representation',
+          'File hearing request timely',
+          'Prepare expense justification'
+        ]
+      });
     }
   }
   

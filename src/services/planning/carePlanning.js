@@ -381,50 +381,422 @@ function assessCareNeeds(medicalInfo, livingInfo, financialInfo, preferenceInfo,
 /**
  * Recommends strategies based on assessed care needs
  * @param {Object} careNeeds - Output from assessCareNeeds
- * @returns {Array} Array of care planning strategies
+ * @returns {Array} Array of structured care planning strategy objects
  */
 function determineCareStrategies(careNeeds) {
   logger.debug("Determining care strategies");
   const strategies = [];
+  let strategyId = 1;
+  
+  const hasFinancialConstraints = careNeeds.assessment?.financialResources && 
+    (!careNeeds.assessment.financialResources.canAffordNursingHome || 
+     !careNeeds.assessment.financialResources.canAffordAssistedLiving);
+  
+  const hasDementia = careNeeds.assessment?.cognitiveStatus?.hasDementia;
+  const highFallRisk = careNeeds.assessment?.safetyRisks?.specific?.falls === 'high';
+  const highSafetyRisk = careNeeds.assessment?.safetyRisks?.overall === 'moderate' || 
+                        careNeeds.assessment?.safetyRisks?.overall === 'high';
+  const caregiverBurnout = careNeeds.assessment?.caregiverSupport?.burnoutRisk === 'high';
 
   switch (careNeeds.recommendedCareLevel) {
     case "nursing":
-      strategies.push("Plan for skilled nursing facility placement");
-      strategies.push("Evaluate long-term care insurance coverage or Medicaid eligibility");
-      if (careNeeds.assessment?.cognitiveStatus?.hasDementia) {
-        strategies.push("Research memory care units within nursing facilities");
+      strategies.push({
+        id: `care-${strategyId++}`,
+        type: 'nursing-facility',
+        name: 'Skilled Nursing Facility Placement',
+        description: 'Plan for comprehensive nursing home care with 24/7 medical supervision and personal care assistance.',
+        pros: [
+          '24/7 skilled nursing care available',
+          'Comprehensive medical management',
+          'Social activities and therapy programs',
+          'Medicaid coverage available when eligible'
+        ],
+        cons: [
+          'High cost ($8,000-$15,000/month)',
+          'Loss of independence and privacy',
+          'Adjustment challenges',
+          'Limited family interaction time'
+        ],
+        effectiveness: 'High',
+        timing: 'Plan 2-3 months ahead',
+        estimatedCost: '$8,000-$15,000/month',
+        monthlyImpact: 'Complete care solution',
+        priority: 'High',
+        careLevel: careNeeds.recommendedCareLevel,
+        specificActions: [
+          'Tour 3-5 facilities in preferred area',
+          'Check state inspection reports',
+          'Verify Medicaid acceptance policies',
+          'Prepare care plan documentation',
+          'Coordinate with discharge planners'
+        ]
+      });
+      
+      strategies.push({
+        id: `care-${strategyId++}`,
+        type: 'insurance-evaluation',
+        name: 'Long-Term Care Coverage Assessment',
+        description: 'Evaluate existing insurance coverage and Medicaid eligibility to fund nursing home care.',
+        pros: [
+          'May provide significant cost coverage',
+          'Reduces family financial burden',
+          'Preserves assets for spouse/heirs',
+          'Professional guidance available'
+        ],
+        cons: [
+          'Complex eligibility requirements',
+          'Application process takes time',
+          'Coverage limits may apply',
+          'Waiting periods possible'
+        ],
+        effectiveness: 'High',
+        timing: 'Begin immediately',
+        estimatedCost: '$0-$2,000 for professional help',
+        monthlyImpact: 'Potential full care coverage',
+        priority: 'High',
+        careLevel: careNeeds.recommendedCareLevel
+      });
+      
+      if (hasDementia) {
+        strategies.push({
+          id: `care-${strategyId++}`,
+          type: 'memory-care',
+          name: 'Memory Care Unit Research',
+          description: 'Identify specialized memory care units within nursing facilities for dementia-specific care.',
+          pros: [
+            'Specialized dementia care training',
+            'Secure environment prevents wandering',
+            'Structured daily activities',
+            'Family support programs'
+          ],
+          cons: [
+            'Higher cost than general nursing care',
+            'Limited availability in some areas',
+            'May require facility transfer',
+            'Adjustment to specialized routine'
+          ],
+          effectiveness: 'High',
+          timing: 'Research within 30 days',
+          estimatedCost: '$10,000-$18,000/month',
+          monthlyImpact: 'Specialized dementia care',
+          priority: 'High',
+          careLevel: 'memory-care'
+        });
       }
-      if (careNeeds.assessment?.financialResources &&
-          !careNeeds.assessment.financialResources.canAffordNursingHome) {
-        strategies.push("Begin Medicaid application and planning process immediately");
+      
+      if (hasFinancialConstraints) {
+        strategies.push({
+          id: `care-${strategyId++}`,
+          type: 'medicaid-application',
+          name: 'Emergency Medicaid Application',
+          description: 'Begin immediate Medicaid application and planning process due to inability to afford private pay.',
+          pros: [
+            'Provides pathway to affordable care',
+            'Retroactive coverage possible',
+            'Asset protection strategies available',
+            'Legal protections for spouse'
+          ],
+          cons: [
+            'Complex application process',
+            'Asset and income restrictions',
+            'Potential penalty periods',
+            'Limited facility choices initially'
+          ],
+          effectiveness: 'Essential',
+          timing: 'File within 2 weeks',
+          estimatedCost: '$2,000-$5,000 legal fees',
+          monthlyImpact: 'Enables affordable care access',
+          priority: 'Critical',
+          careLevel: careNeeds.recommendedCareLevel
+        });
       }
       break;
+      
     case "assisted living":
-      strategies.push("Research assisted living facilities near family members");
-      strategies.push("Evaluate income and asset availability for private pay or waiver programs");
-      if (careNeeds.assessment?.cognitiveStatus?.hasDementia) {
-        strategies.push("Focus on facilities with dedicated memory care units");
+      strategies.push({
+        id: `care-${strategyId++}`,
+        type: 'assisted-living',
+        name: 'Assisted Living Facility Research',
+        description: 'Research assisted living facilities near family members with appropriate service levels.',
+        pros: [
+          'Maintains independence with support',
+          'Social engagement opportunities',
+          'Meal and housekeeping services',
+          'Emergency response systems'
+        ],
+        cons: [
+          'High monthly costs ($3,000-$6,000)',
+          'Limited Medicaid coverage',
+          'May need to relocate as needs increase',
+          'Less medical supervision than nursing home'
+        ],
+        effectiveness: 'High',
+        timing: 'Research within 1-2 months',
+        estimatedCost: '$3,000-$6,000/month',
+        monthlyImpact: 'Supported independent living',
+        priority: 'High',
+        careLevel: careNeeds.recommendedCareLevel,
+        specificActions: [
+          'Visit facilities near family members',
+          'Compare service packages and costs',
+          'Check licensing and inspection records',
+          'Assess transportation services',
+          'Review contract terms carefully'
+        ]
+      });
+      
+      strategies.push({
+        id: `care-${strategyId++}`,
+        type: 'financial-assessment',
+        name: 'Assisted Living Financial Planning',
+        description: 'Evaluate income, assets, and waiver program availability for assisted living funding.',
+        pros: [
+          'Identifies all funding sources',
+          'May qualify for waiver programs',
+          'Optimizes asset utilization',
+          'Plans for future care transitions'
+        ],
+        cons: [
+          'Limited Medicaid waiver availability',
+          'Waiting lists for waiver programs',
+          'Asset spend-down may be required',
+          'Complex eligibility requirements'
+        ],
+        effectiveness: 'Medium-High',
+        timing: 'Complete within 30 days',
+        estimatedCost: '$500-$2,000',
+        monthlyImpact: 'Optimizes funding strategies',
+        priority: 'High',
+        careLevel: careNeeds.recommendedCareLevel
+      });
+      
+      if (hasDementia) {
+        strategies.push({
+          id: `care-${strategyId++}`,
+          type: 'memory-care-assisted',
+          name: 'Memory Care Assisted Living',
+          description: 'Focus on assisted living facilities with dedicated memory care units and specialized programming.',
+          pros: [
+            'Specialized dementia care in less restrictive setting',
+            'Maintains some independence',
+            'Family-style environment',
+            'Structured but flexible daily routine'
+          ],
+          cons: [
+            'Higher cost than standard assisted living',
+            'May need transition to nursing care later',
+            'Limited availability',
+            'Specialized staff requirements'
+          ],
+          effectiveness: 'High',
+          timing: 'Research immediately',
+          estimatedCost: '$4,500-$8,000/month',
+          monthlyImpact: 'Dementia-specific assisted living',
+          priority: 'High',
+          careLevel: 'memory-care-assisted'
+        });
       }
-      if (careNeeds.assessment?.safetyRisks?.specific?.falls === 'high') {
-        strategies.push("Prioritize facilities with fall prevention programs");
+      
+      if (highFallRisk) {
+        strategies.push({
+          id: `care-${strategyId++}`,
+          type: 'fall-prevention',
+          name: 'Fall Prevention Program Priority',
+          description: 'Prioritize facilities with comprehensive fall prevention programs and safety features.',
+          pros: [
+            'Reduces injury risk',
+            'Specialized safety equipment',
+            'Trained staff for fall prevention',
+            'Physical therapy integration'
+          ],
+          cons: [
+            'May limit facility choices',
+            'Potential higher costs',
+            'Additional assessments required',
+            'May feel restrictive'
+          ],
+          effectiveness: 'High',
+          timing: 'Include in facility selection',
+          estimatedCost: 'Included in facility costs',
+          monthlyImpact: 'Improved safety outcomes',
+          priority: 'High',
+          careLevel: careNeeds.recommendedCareLevel
+        });
       }
       break;
+      
     case "in-home":
     default:
-      strategies.push("Coordinate home care services through local agencies");
-      strategies.push("Apply for Medicaid waiver programs if care needs meet criteria");
-      if (careNeeds.assessment?.safetyRisks?.overall === 'moderate' ||
-          careNeeds.assessment?.safetyRisks?.overall === 'high') {
-        strategies.push("Conduct home safety evaluation and implement modifications");
+      strategies.push({
+        id: `care-${strategyId++}`,
+        type: 'home-care-coordination',
+        name: 'Home Care Services Coordination',
+        description: 'Coordinate comprehensive home care services through local agencies to support aging in place.',
+        pros: [
+          'Remains in familiar environment',
+          'Maintains independence and control',
+          'Cost-effective for lower care needs',
+          'Family involvement easier'
+        ],
+        cons: [
+          'Limited overnight supervision',
+          'Caregiver turnover challenges',
+          'Emergency response concerns',
+          'May become inadequate as needs increase'
+        ],
+        effectiveness: 'High',
+        timing: 'Implement within 2-4 weeks',
+        estimatedCost: '$20-$35/hour',
+        monthlyImpact: 'Maintains home-based living',
+        priority: 'High',
+        careLevel: careNeeds.recommendedCareLevel,
+        specificActions: [
+          'Contact licensed home care agencies',
+          'Conduct caregiver interviews',
+          'Verify insurance and bonding',
+          'Establish care plan and schedule',
+          'Set up emergency protocols'
+        ]
+      });
+      
+      strategies.push({
+        id: `care-${strategyId++}`,
+        type: 'medicaid-waiver',
+        name: 'Medicaid Waiver Program Application',
+        description: 'Apply for Medicaid waiver programs if care needs meet criteria for home and community-based services.',
+        pros: [
+          'Significantly reduces care costs',
+          'Supports aging in place preference',
+          'Comprehensive service coverage',
+          'Care coordination included'
+        ],
+        cons: [
+          'Waiting lists in most states',
+          'Strict eligibility requirements',
+          'Limited service hours',
+          'Complex application process'
+        ],
+        effectiveness: 'High',
+        timing: 'Apply immediately if eligible',
+        estimatedCost: '$0-$1,000 application help',
+        monthlyImpact: 'Potential full home care coverage',
+        priority: 'High',
+        careLevel: careNeeds.recommendedCareLevel
+      });
+      
+      if (highSafetyRisk) {
+        strategies.push({
+          id: `care-${strategyId++}`,
+          type: 'home-safety',
+          name: 'Home Safety Evaluation and Modifications',
+          description: 'Conduct comprehensive home safety evaluation and implement necessary modifications to reduce risks.',
+          pros: [
+            'Reduces fall and injury risks',
+            'Enables safer aging in place',
+            'May qualify for assistance programs',
+            'Improves caregiver confidence'
+          ],
+          cons: [
+            'Upfront modification costs',
+            'May require contractor work',
+            'Temporary disruption during modifications',
+            'Ongoing maintenance needs'
+          ],
+          effectiveness: 'High',
+          timing: 'Complete within 30 days',
+          estimatedCost: '$1,000-$5,000',
+          monthlyImpact: 'Improved safety for home care',
+          priority: 'High',
+          careLevel: careNeeds.recommendedCareLevel,
+          specificActions: [
+            'Schedule occupational therapy home assessment',
+            'Install grab bars and safety equipment',
+            'Improve lighting throughout home',
+            'Remove trip hazards and clutter',
+            'Set up emergency alert system'
+          ]
+        });
       }
-      if (careNeeds.assessment?.caregiverSupport?.burnoutRisk === 'high') {
-        strategies.push("Arrange for respite care services to support primary caregiver");
+      
+      if (caregiverBurnout) {
+        strategies.push({
+          id: `care-${strategyId++}`,
+          type: 'respite-care',
+          name: 'Respite Care Services',
+          description: 'Arrange for regular respite care services to support primary caregiver and prevent burnout.',
+          pros: [
+            'Prevents caregiver burnout',
+            'Maintains care quality',
+            'Provides caregiver mental health support',
+            'Enables caregiver to maintain employment'
+          ],
+          cons: [
+            'Additional care costs',
+            'Coordination complexity',
+            'Care recipient may resist',
+            'Finding reliable respite providers'
+          ],
+          effectiveness: 'High',
+          timing: 'Implement within 2 weeks',
+          estimatedCost: '$20-$35/hour',
+          monthlyImpact: 'Sustainable family caregiving',
+          priority: 'High',
+          careLevel: careNeeds.recommendedCareLevel
+        });
       }
       break;
   }
 
-  strategies.push("Ensure advance directives and healthcare proxy are in place");
-  strategies.push("Establish regular reassessment schedule based on care needs");
+  // Universal strategies for all care levels
+  strategies.push({
+    id: `care-${strategyId++}`,
+    type: 'advance-directives',
+    name: 'Advance Directives and Healthcare Proxy',
+    description: 'Ensure all advance directives, healthcare proxy, and HIPAA authorizations are properly executed and accessible.',
+    pros: [
+      'Ensures wishes are followed',
+      'Reduces family decision-making burden',
+      'Provides legal clarity for providers',
+      'Enables appropriate medical decisions'
+    ],
+    cons: [
+      'Difficult conversations required',
+      'May need periodic updates',
+      'Legal complexity',
+      'Family disagreement potential'
+    ],
+    effectiveness: 'Essential',
+    timing: 'Complete immediately',
+    estimatedCost: '$200-$800',
+    monthlyImpact: 'Ensures care decision authority',
+    priority: 'High',
+    careLevel: 'universal'
+  });
+  
+  strategies.push({
+    id: `care-${strategyId++}`,
+    type: 'care-monitoring',
+    name: 'Regular Care Reassessment Schedule',
+    description: 'Establish systematic schedule for reassessing care needs and adjusting services as condition changes.',
+    pros: [
+      'Ensures appropriate care level',
+      'Identifies changing needs early',
+      'Optimizes care resources',
+      'Prevents crisis situations'
+    ],
+    cons: [
+      'Requires ongoing coordination',
+      'May involve difficult transitions',
+      'Assessment costs',
+      'Potential care disruptions'
+    ],
+    effectiveness: 'High',
+    timing: 'Establish within 30 days',
+    estimatedCost: '$200-$500 per assessment',
+    monthlyImpact: 'Optimized ongoing care',
+    priority: 'Medium',
+    careLevel: 'universal'
+  });
 
   return strategies;
 }

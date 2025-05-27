@@ -394,17 +394,110 @@ async function medicaidTrustPlanning(clientInfo, assets, income, eligibilityResu
     // Compile recommendations
     const recommendations = [];
     
+    // Build strategies array with structured objects
+    const strategies = [];
+    let strategyId = 1;
+    
     if (!needsAssessment.needsTrust) {
       recommendations.push('Trust planning is not needed at this time');
       recommendations.push('Focus on other Medicaid planning strategies');
-    } else if (needsAssessment.trustType?.includes('income')) {
-      recommendations.push('Consider income trust for Medicaid planning');
-      recommendations.push(...trustOptions.recommendations);
-      
-      if (fundingStrategy.timelineRecommendations) {
-        recommendations.push(...fundingStrategy.timelineRecommendations);
-      }
     } else {
+      // Add trust strategies based on recommended types
+      if (trustOptions.recommendedTrustTypes.includes('irrevocable medicaid asset protection trust')) {
+        strategies.push({
+          id: `trust-${strategyId++}`,
+          type: 'irrevocable-trust',
+          name: 'Irrevocable Medicaid Asset Protection Trust',
+          description: 'Transfer assets to an irrevocable trust to protect them from Medicaid spend-down after the lookback period.',
+          pros: trustOptions.optionComparison['irrevocable']?.pros || [
+            'Medicaid compliant after lookback period',
+            'Can protect home and other significant assets',
+            'Can include spendthrift provisions'
+          ],
+          cons: trustOptions.optionComparison['irrevocable']?.cons || [
+            'Loss of control',
+            '60-month lookback period',
+            'Irrevocable nature'
+          ],
+          effectiveness: 'High',
+          timing: 'Must be established 5+ years before Medicaid need',
+          estimatedCost: '$3,000-$10,000 setup plus annual fees',
+          monthlyImpact: 'Protects assets after lookback period'
+        });
+      }
+      
+      if (trustOptions.recommendedTrustTypes.includes('pooled trust')) {
+        strategies.push({
+          id: `trust-${strategyId++}`,
+          type: 'pooled-trust',
+          name: 'Pooled Income Trust',
+          description: 'Join a pooled trust managed by a non-profit organization to manage excess income or resources.',
+          pros: trustOptions.optionComparison['pooled']?.pros || [
+            'Good for older applicants',
+            'Professionally managed',
+            'Lower setup and maintenance costs'
+          ],
+          cons: trustOptions.optionComparison['pooled']?.cons || [
+            'Less flexibility',
+            'Limited control',
+            'Potential state recovery after death'
+          ],
+          effectiveness: 'High',
+          timing: 'Can be established immediately',
+          estimatedCost: '$500-$2,000 setup, monthly fees vary',
+          monthlyImpact: 'Manages excess income for eligibility'
+        });
+      }
+      
+      if (trustOptions.recommendedTrustTypes.includes('special needs trust')) {
+        strategies.push({
+          id: `trust-${strategyId++}`,
+          type: 'special-needs-trust',
+          name: 'Special Needs Trust',
+          description: 'Create a trust to provide for a disabled family member without jeopardizing their government benefits.',
+          pros: trustOptions.optionComparison['specialNeeds']?.pros || [
+            'Preserves government benefits',
+            'Provides for supplemental needs',
+            'Can be funded during life or at death'
+          ],
+          cons: trustOptions.optionComparison['specialNeeds']?.cons || [
+            'Complex rules',
+            'Medicaid payback provisions may apply',
+            'Requires specialized trustee'
+          ],
+          effectiveness: 'High',
+          timing: 'Can be established anytime',
+          estimatedCost: '$2,000-$5,000 setup',
+          monthlyImpact: 'Preserves benefits while providing support'
+        });
+      }
+      
+      if (trustOptions.recommendedTrustTypes.includes('income-only trust')) {
+        strategies.push({
+          id: `trust-${strategyId++}`,
+          type: 'income-only-trust',
+          name: 'Income-Only Trust',
+          description: 'Establish a trust that provides income while protecting principal from Medicaid recovery.',
+          pros: trustOptions.optionComparison['income-only']?.pros || [
+            'Manages excess income',
+            'Medicaid compliance',
+            'Preserves benefit eligibility'
+          ],
+          cons: trustOptions.optionComparison['income-only']?.cons || [
+            'Administrative burden',
+            'Monthly management',
+            'Limited flexibility'
+          ],
+          effectiveness: 'Medium-High',
+          timing: 'Establish before application',
+          estimatedCost: '$1,500-$3,000 setup',
+          monthlyImpact: 'Preserves income stream'
+        });
+      }
+      
+      if (needsAssessment.trustType?.includes('income')) {
+        recommendations.push('Consider income trust for Medicaid planning');
+      }
       recommendations.push(...trustOptions.recommendations);
       
       if (fundingStrategy.timelineRecommendations) {
@@ -440,7 +533,9 @@ async function medicaidTrustPlanning(clientInfo, assets, income, eligibilityResu
       fundingStrategy,
       recommendations,
       implementationResources,
-      planningReport
+      planningReport,
+      strategies,
+      approach: planningReport.summary + '\n\n' + recommendations.join('\n')
     };
   } catch (error) {
     logger.error(`Error in trust planning: ${error.message}`);

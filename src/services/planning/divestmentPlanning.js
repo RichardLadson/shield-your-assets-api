@@ -215,10 +215,16 @@ function calculatePenaltyPeriod(analysis, state) {
 
 /**
  * Develop strategies to mitigate penalties
+ * @param {Object} analysis - Transfer analysis results
+ * @param {Object} penaltyCalc - Penalty calculation results
+ * @param {Object} clientInfo - Client information
+ * @param {string} state - State for planning
+ * @returns {Object} Structured mitigation strategies
  */
 function developMitigationStrategies(analysis, penaltyCalc, clientInfo = {}, state) {
   const strategies = [];
   const priorityActions = [];
+  let strategyId = 1;
 
   // Ensure analysis has all required properties
   if (!analysis) {
@@ -234,49 +240,245 @@ function developMitigationStrategies(analysis, penaltyCalc, clientInfo = {}, sta
   }
 
   if (!penaltyCalc.hasPenalty) {
-    strategies.push('No penalty mitigation needed');
+    strategies.push({
+      id: `divestment-${strategyId++}`,
+      type: 'no-penalty',
+      name: 'No Penalty Mitigation Required',
+      description: 'No transfers within lookback period create penalties. Focus on maintaining compliance.',
+      pros: [
+        'Clean transfer history',
+        'No penalty period to navigate',
+        'Immediate Medicaid eligibility possible',
+        'No asset recovery required'
+      ],
+      cons: [
+        'Must maintain ongoing compliance',
+        'Future transfers must be carefully planned',
+        'Lookback period still applies'
+      ],
+      effectiveness: 'N/A',
+      timing: 'Ongoing compliance',
+      estimatedCost: '$0',
+      monthlyImpact: 'No penalty delays',
+      priority: 'Low'
+    });
     return { strategies, priorityActions };
   }
 
+  // Major penalty - consider asset return
   if (penaltyCalc.penaltyMonths > 6) {
-    strategies.push('Consider return of assets to reduce penalty period');
-    priorityActions.push('Consult with elder law attorney about returning assets');
+    strategies.push({
+      id: `divestment-${strategyId++}`,
+      type: 'asset-return',
+      name: 'Asset Return Strategy',
+      description: `Return transferred assets to reduce penalty period from ${penaltyCalc.penaltyMonths} months.`,
+      pros: [
+        'Can significantly reduce penalty period',
+        'May eliminate penalty entirely',
+        'Faster path to Medicaid eligibility',
+        'Reduces care funding gap'
+      ],
+      cons: [
+        'Assets become countable again',
+        'May require legal assistance',
+        'Family may resist returning gifts',
+        'Administrative complexity'
+      ],
+      effectiveness: 'High',
+      timing: 'Immediately before Medicaid application',
+      estimatedCost: '$2,000-$5,000 legal fees',
+      monthlyImpact: `Reduce penalty by up to ${penaltyCalc.penaltyMonths} months`,
+      priority: 'High',
+      specificActions: [
+        'Consult elder law attorney about return strategy',
+        'Calculate optimal return amount',
+        'Negotiate with transfer recipients',
+        'Document return transaction properly',
+        'File amended Medicaid application'
+      ]
+    });
   }
 
-  if (penaltyCalc.penaltyMonths > 0 && penaltyCalc.penaltyMonths <= 1) {
-    strategies.push('Accept penalty period and plan accordingly');
-    priorityActions.push('Reserve funds for care during penalty period');
+  // Short penalty - plan through it
+  if (penaltyCalc.penaltyMonths > 0 && penaltyCalc.penaltyMonths <= 6) {
+    const penaltyEndDate = new Date(penaltyCalc.penaltyEnd);
+    strategies.push({
+      id: `divestment-${strategyId++}`,
+      type: 'penalty-planning',
+      name: 'Penalty Period Management',
+      description: `Plan care funding during ${penaltyCalc.penaltyMonths}-month penalty period ending ${penaltyEndDate.toLocaleDateString()}.`,
+      pros: [
+        'Shorter penalty period to manage',
+        'No asset recovery required',
+        'Clear end date for planning',
+        'Family keeps transferred assets'
+      ],
+      cons: [
+        'Must fund care during penalty',
+        'Risk of financial strain',
+        'Delayed Medicaid benefits',
+        'Potential quality of care issues'
+      ],
+      effectiveness: 'Medium',
+      timing: 'Immediate planning required',
+      estimatedCost: `$${(penaltyCalc.financialImpact?.estimatedCost || 50000).toLocaleString()} penalty amount`,
+      monthlyImpact: `${penaltyCalc.penaltyMonths} months of private pay`,
+      priority: 'High',
+      specificActions: [
+        'Reserve funds for care during penalty',
+        'Negotiate private pay rates with facilities',
+        'Explore family financial assistance',
+        'Prepare Medicaid application for penalty end',
+        'Consider care setting adjustments'
+      ]
+    });
   }
 
+  // Documentation issues
   if (analysis.documentationIssues.length > 0) {
-    strategies.push('Improve transfer documentation');
-    priorityActions.push('Collect missing transfer documents');
+    strategies.push({
+      id: `divestment-${strategyId++}`,
+      type: 'documentation',
+      name: 'Transfer Documentation Improvement',
+      description: `Address ${analysis.documentationIssues.length} documentation issues to support transfer justifications.`,
+      pros: [
+        'May reduce penalty exposure',
+        'Supports exemption claims',
+        'Improves application process',
+        'Demonstrates good faith effort'
+      ],
+      cons: [
+        'Time-intensive documentation process',
+        'May require professional help',
+        'No guarantee of penalty reduction',
+        'Past transactions may be hard to document'
+      ],
+      effectiveness: 'Medium-High',
+      timing: 'Complete within 30 days',
+      estimatedCost: '$500-$2,000',
+      monthlyImpact: 'Potential penalty reduction',
+      priority: 'Medium',
+      specificActions: [
+        'Collect missing transfer documents',
+        'Gather bank statements and records',
+        'Document care services provided',
+        'Obtain fair market value appraisals',
+        'Prepare exemption justifications'
+      ]
+    });
   }
 
+  // Caregiver compensation exemption
   analysis.transfersWithinLookback.forEach(tx => {
     if (tx.details && tx.details.childProvidedCare) {
-      strategies.push('Reclassify transfer as caregiver compensation to seek exemption');
-      priorityActions.push('Document care provided by family member');
+      strategies.push({
+        id: `divestment-${strategyId++}`,
+        type: 'caregiver-exemption',
+        name: 'Caregiver Compensation Exemption',
+        description: 'Reclassify asset transfer as compensation for family caregiver services to obtain penalty exemption.',
+        pros: [
+          'Can eliminate penalty entirely',
+          'Recognizes legitimate care services',
+          'No asset return required',
+          'Legally established exemption'
+        ],
+        cons: [
+          'Must prove adequate care was provided',
+          'Requires detailed documentation',
+          'Compensation must be reasonable',
+          'May require expert testimony'
+        ],
+        effectiveness: 'High',
+        timing: '2-3 months to document',
+        estimatedCost: '$1,500-$4,000 legal fees',
+        monthlyImpact: 'Eliminate penalty period',
+        priority: 'High',
+        specificActions: [
+          'Document care provided by family member',
+          'Establish fair compensation rate',
+          'Gather medical records showing care need',
+          'Obtain witness statements',
+          'Prepare exemption application'
+        ]
+      });
     }
   });
 
+  // Family caregiver situation
   if (clientInfo.familyInfo && Array.isArray(clientInfo.familyInfo.children)) {
     const caregiver = clientInfo.familyInfo.children.find(c =>
       c.relationship && c.relationship.toLowerCase().includes('caregiver')
     );
     if (caregiver) {
-      strategies.push('Consider caregiver exemption based on family care provided');
-      priorityActions.push('Document care provided by ' + caregiver.name);
+      strategies.push({
+        id: `divestment-${strategyId++}`,
+        type: 'family-caregiver',
+        name: 'Family Caregiver Exemption',
+        description: `Document care services provided by ${caregiver.name} to support transfer exemption claim.`,
+        pros: [
+          'Strong exemption basis',
+          'Family member already providing care',
+          'Can justify past transfers',
+          'Ongoing care relationship'
+        ],
+        cons: [
+          'Must prove 2+ years of care',
+          'Care must delay institutional placement',
+          'Detailed documentation required',
+          'Retroactive application challenging'
+        ],
+        effectiveness: 'High',
+        timing: '1-2 months to compile evidence',
+        estimatedCost: '$1,000-$3,000',
+        monthlyImpact: 'Potential full penalty exemption',
+        priority: 'High',
+        specificActions: [
+          `Document care provided by ${caregiver.name}`,
+          'Establish timeline of care services',
+          'Gather medical evidence of care need',
+          'Demonstrate delayed institutionalization',
+          'File formal exemption request'
+        ]
+      });
     }
   }
 
+  // Terminal condition hardship waiver
   if (
     clientInfo.medicalInfo &&
     clientInfo.medicalInfo.diagnoses &&
     clientInfo.medicalInfo.diagnoses.some(d => /terminal/i.test(d))
   ) {
-    strategies.push('Apply for hardship waiver due to medical condition');
-    priorityActions.push('Prepare hardship waiver application');
+    strategies.push({
+      id: `divestment-${strategyId++}`,
+      type: 'hardship-waiver',
+      name: 'Medical Hardship Waiver',
+      description: 'Apply for penalty waiver based on terminal medical diagnosis creating undue hardship.',
+      pros: [
+        'Can waive entire penalty period',
+        'Recognizes medical urgency',
+        'Immediate Medicaid eligibility possible',
+        'Compassionate grounds for waiver'
+      ],
+      cons: [
+        'Must prove undue hardship',
+        'Terminal diagnosis required',
+        'Discretionary decision by state',
+        'Limited precedent in some states'
+      ],
+      effectiveness: 'Medium-High',
+      timing: 'File immediately with application',
+      estimatedCost: '$1,000-$2,500',
+      monthlyImpact: 'Immediate eligibility if approved',
+      priority: 'High',
+      specificActions: [
+        'Prepare hardship waiver application',
+        'Gather terminal diagnosis documentation',
+        'Document financial hardship',
+        'Obtain physician statements',
+        'Submit with Medicaid application'
+      ]
+    });
   }
 
   return { strategies, priorityActions };

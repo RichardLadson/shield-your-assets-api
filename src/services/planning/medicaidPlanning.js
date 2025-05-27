@@ -79,7 +79,7 @@ async function medicaidPlanning(clientInfo, assets, income, expenses, medicalInf
     
     // Step 4: Asset Planning
     const assetPlanningResult = await medicaidAssetPlanning(
-      normalizedClientInfo, normalizedAssets, normalizedState
+      normalizedClientInfo, normalizedAssets, normalizedIncome, normalizedExpenses, livingInfo, normalizedState
     );
     
     // Step 5: Income Planning
@@ -89,17 +89,17 @@ async function medicaidPlanning(clientInfo, assets, income, expenses, medicalInf
     
     // Step 6: Trust Planning
     const trustPlanningResult = await medicaidTrustPlanning(
-      normalizedClientInfo, normalizedAssets, normalizedState
+      normalizedClientInfo, normalizedAssets, normalizedIncome, eligibilityResult, normalizedState
     );
     
     // Step 7: Annuity Planning
     const annuityPlanningResult = await medicaidAnnuityPlanning(
-      normalizedClientInfo, normalizedAssets, normalizedState
+      normalizedClientInfo, normalizedAssets, normalizedIncome, eligibilityResult, normalizedState
     );
     
     // Step 8: Divestment Planning
     const divestmentPlanningResult = await medicaidDivestmentPlanning(
-      normalizedClientInfo, normalizedAssets, normalizedState
+      normalizedClientInfo, normalizedAssets, null, normalizedState
     );
     
     // Step 9: Community Spouse Planning (only for married clients)
@@ -110,13 +110,21 @@ async function medicaidPlanning(clientInfo, assets, income, expenses, medicalInf
     
     if (maritalStatus === 'married') {
       communitySpousePlanningResult = await medicaidCommunitySpousePlanning(
-        normalizedClientInfo, normalizedAssets, normalizedState
+        normalizedClientInfo, normalizedAssets, normalizedIncome, normalizedExpenses, normalizedState
       );
     }
     
     // Step 10: Application Planning
     const applicationPlanningResult = await medicaidApplicationPlanning(
-      normalizedClientInfo, normalizedAssets, normalizedIncome, normalizedState, maritalStatus
+      normalizedClientInfo, normalizedAssets, normalizedIncome, {
+        eligibilityResult,
+        assetPlanningResult,
+        incomePlanningResult,
+        trustPlanningResult,
+        annuityPlanningResult,
+        divestmentPlanningResult,
+        communitySpousePlanningResult
+      }, normalizedState
     );
     
     // Step 11: Post-Eligibility Planning
@@ -129,6 +137,213 @@ async function medicaidPlanning(clientInfo, assets, income, expenses, medicalInf
       normalizedClientInfo, normalizedAssets, normalizedState
     );
     
+    // Combine all strategies for frontend
+    const allStrategies = [];
+    let strategyId = 1;
+    
+    logger.info(`Asset strategies found: ${JSON.stringify(assetPlanningResult.strategies)}`);
+    logger.info(`Trust strategies found: ${JSON.stringify(trustPlanningResult.strategies)}`);
+    
+    // Add asset strategies
+    if (assetPlanningResult.strategies && assetPlanningResult.strategies.length > 0) {
+      assetPlanningResult.strategies.forEach(strategy => {
+        if (typeof strategy === 'object' && strategy.id) {
+          // Strategy is already a structured object from the new assetPlanning module
+          allStrategies.push(strategy);
+        } else if (typeof strategy === 'string') {
+          logger.info(`Processing string strategy: ${strategy}`);
+          // Parse string strategies into structured format (for backward compatibility)
+          if (strategy.toLowerCase().includes('trust') || strategy.toLowerCase().includes('irrevocable')) {
+            allStrategies.push({
+              id: strategyId++,
+              name: "Irrevocable Trust",
+              description: "Transfer assets to an irrevocable trust to remove them from Medicaid countable assets.",
+              pros: ["Assets protected from Medicaid spend-down", "Potentially avoids estate recovery", "Provides legacy planning"],
+              cons: ["Loss of direct control over assets", "5-year look-back period applies", "Cannot modify trust terms"],
+              effectiveness: "High",
+              timing: "Implement at least 5 years before anticipated need"
+            });
+          } else if (strategy.toLowerCase().includes('spousal') || strategy.toLowerCase().includes('spouse')) {
+            allStrategies.push({
+              id: strategyId++,
+              name: "Spousal Transfer",
+              description: "Transfer assets to a community spouse to protect them while qualifying for Medicaid.",
+              pros: ["No look-back period for transfers between spouses", "Community spouse retains control", "Immediate protection"],
+              cons: ["Only applicable if married", "Community spouse subject to resource limits", "State variations in allowances"],
+              effectiveness: "Medium-High",
+              timing: "Can be implemented close to application time"
+            });
+          } else if (strategy.toLowerCase().includes('spend') || strategy.toLowerCase().includes('convert')) {
+            allStrategies.push({
+              id: strategyId++,
+              name: "Asset Conversion Strategy",
+              description: "Convert countable assets to non-countable assets or spend down strategically.",
+              pros: ["Immediate effect on eligibility", "Retain benefit of assets", "No look-back period concerns"],
+              cons: ["Assets must be used wisely", "Limited to specific exempt categories", "May not protect all assets"],
+              effectiveness: "Medium",
+              timing: "Implement before application"
+            });
+          } else if (strategy.toLowerCase().includes('annuity')) {
+            allStrategies.push({
+              id: strategyId++,
+              name: "Medicaid-Compliant Annuity",
+              description: "Purchase a Medicaid-compliant annuity to convert assets to income stream.",
+              pros: ["Converts excess resources to income", "Protects assets for community spouse", "Immediate eligibility possible"],
+              cons: ["Irrevocable decision", "Must meet strict Medicaid requirements", "Income stream counts toward eligibility"],
+              effectiveness: "High",
+              timing: "Can be implemented immediately before application"
+            });
+          } else {
+            // Generic strategy for unmatched strings
+            allStrategies.push({
+              id: strategyId++,
+              name: strategy.substring(0, 50),
+              description: strategy,
+              pros: ["May help with Medicaid qualification"],
+              cons: ["Requires professional guidance"],
+              effectiveness: "Varies",
+              timing: "Consult with Medicaid planner"
+            });
+          }
+        }
+      });
+    }
+    
+    // Add trust strategies
+    if (trustPlanningResult.strategies && trustPlanningResult.strategies.length > 0) {
+      trustPlanningResult.strategies.forEach(strategy => {
+        if (strategy.type && !allStrategies.find(s => s.name === strategy.name)) {
+          allStrategies.push({
+            id: strategyId++,
+            name: strategy.name || strategy.type,
+            description: strategy.description || `${strategy.type} strategy for Medicaid planning`,
+            pros: strategy.benefits || [],
+            cons: strategy.limitations || [],
+            effectiveness: strategy.effectiveness || "Medium",
+            timing: strategy.timing || "Varies based on situation"
+          });
+        }
+      });
+    }
+    
+    // Add income strategies
+    if (incomePlanningResult.strategies && incomePlanningResult.strategies.length > 0) {
+      incomePlanningResult.strategies.forEach(strategy => {
+        if (typeof strategy === 'object' && strategy.id) {
+          // Strategy is already a structured object from the new incomePlanning module
+          allStrategies.push(strategy);
+        } else if (typeof strategy === 'string' && !allStrategies.find(s => s.name.toLowerCase().includes(strategy.toLowerCase().substring(0, 20)))) {
+          // Handle legacy string strategies
+          if (strategy.toLowerCase().includes('miller trust') || strategy.toLowerCase().includes('qit')) {
+            allStrategies.push({
+              id: strategyId++,
+              name: "Miller Trust (QIT)",
+              description: "Establish a Qualified Income Trust to manage excess income.",
+              pros: ["Allows eligibility despite excess income", "Required in income cap states", "Preserves income for care"],
+              cons: ["Complex setup required", "Ongoing administration needed", "Income must flow through trust"],
+              effectiveness: "High",
+              timing: "Must be established before Medicaid application"
+            });
+          }
+        }
+      });
+    }
+    
+    // Add divestment strategies
+    if (divestmentPlanningResult.strategies && divestmentPlanningResult.strategies.length > 0) {
+      divestmentPlanningResult.strategies.forEach(strategy => {
+        if (typeof strategy === 'object' && strategy.id) {
+          // Strategy is already a structured object from the refactored divestmentPlanning module
+          allStrategies.push(strategy);
+        } else if (typeof strategy === 'string' && strategy.length > 10) {
+          // Handle legacy string strategies
+          logger.info(`Processing legacy divestment strategy: ${strategy}`);
+          allStrategies.push({
+            id: strategyId++,
+            name: strategy.substring(0, 50),
+            description: strategy,
+            pros: ["May reduce penalty exposure"],
+            cons: ["Requires professional guidance"],
+            effectiveness: "Varies",
+            timing: "Consult with Medicaid planner"
+          });
+        }
+      });
+    }
+    
+    // Add estate recovery strategies
+    if (estateRecoveryPlanningResult.strategies && estateRecoveryPlanningResult.strategies.length > 0) {
+      estateRecoveryPlanningResult.strategies.forEach(strategy => {
+        if (typeof strategy === 'object' && strategy.id) {
+          // Strategy is already a structured object from the refactored estateRecovery module
+          allStrategies.push(strategy);
+        } else if (typeof strategy === 'string' && strategy.length > 10) {
+          // Handle legacy string strategies
+          allStrategies.push({
+            id: strategyId++,
+            name: strategy.substring(0, 50),
+            description: strategy,
+            pros: ["May protect assets from recovery"],
+            cons: ["Requires professional guidance"],
+            effectiveness: "Varies",
+            timing: "Consult with estate planning attorney"
+          });
+        }
+      });
+    }
+    
+    // Add post-eligibility strategies
+    if (postEligibilityPlanningResult.strategies && postEligibilityPlanningResult.strategies.length > 0) {
+      postEligibilityPlanningResult.strategies.forEach(strategy => {
+        if (typeof strategy === 'object' && strategy.id) {
+          // Strategy is already a structured object from the refactored postEligibilityPlanning module
+          allStrategies.push(strategy);
+        } else if (typeof strategy === 'string' && strategy.length > 10) {
+          // Handle legacy string strategies
+          allStrategies.push({
+            id: strategyId++,
+            name: strategy.substring(0, 50),
+            description: strategy,
+            pros: ["Maintains Medicaid compliance"],
+            cons: ["Requires ongoing attention"],
+            effectiveness: "High",
+            timing: "Ongoing requirement"
+          });
+        }
+      });
+    }
+    
+    // If married, add community spouse strategies
+    if (maritalStatus === 'married' && communitySpousePlanningResult.strategies && communitySpousePlanningResult.strategies.length > 0) {
+      if (!allStrategies.find(s => s.name.includes('Spousal'))) {
+        allStrategies.push({
+          id: strategyId++,
+          name: "Community Spouse Resource Allowance",
+          description: "Maximize the amount of assets the community spouse can retain.",
+          pros: ["Protects resources for at-home spouse", "No penalty period", "Immediate protection"],
+          cons: ["Complex calculations required", "State-specific rules apply", "May require court order for maximum"],
+          effectiveness: "High",
+          timing: "At time of Medicaid application"
+        });
+      }
+    }
+    
+    // Ensure we always have at least some strategies
+    if (allStrategies.length === 0) {
+      logger.warn('No strategies generated, adding default strategies');
+      allStrategies.push({
+        id: 1,
+        name: "Medicaid Planning Consultation",
+        description: "Work with a Medicaid planning attorney to develop a customized strategy.",
+        pros: ["Personalized advice", "Ensures compliance with state rules", "Maximizes asset protection"],
+        cons: ["Professional fees required", "Time needed for planning", "May require document preparation"],
+        effectiveness: "High",
+        timing: "As soon as possible"
+      });
+    }
+    
+    logger.info(`Total strategies generated: ${allStrategies.length}`);
+
     // Combine all results into a comprehensive planning report
     const planningResult = {
       // Care Planning
@@ -182,6 +397,9 @@ async function medicaidPlanning(clientInfo, assets, income, expenses, medicalInf
       // Estate Recovery Planning
       estateRecoveryStrategies: estateRecoveryPlanningResult.strategies,
       estateRecoveryPlan: estateRecoveryPlanningResult.approach,
+      
+      // Combined strategies for frontend
+      strategies: allStrategies,
       
       // Store normalized data for test verification
       normalizedData: normalizedData,
