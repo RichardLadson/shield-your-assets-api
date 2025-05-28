@@ -2,6 +2,8 @@
 const logger = require('../config/logger');
 const { assessMedicaidEligibility } = require('../services/planning/eligibilityAssessment');
 const { getMedicaidRules } = require('../services/utils/medicaidRulesLoader');
+const { Client, Assessment } = require('../models');
+const crypto = require('crypto');
 
 /**
  * Standardized response formatter
@@ -97,6 +99,38 @@ exports.assessEligibility = async (req, res) => {
     if (result.status === 'error') {
       logger.error(`Error in assessment: ${result.error}`);
       return res.status(400).json(result);
+    }
+    
+    // Save client and assessment to database
+    try {
+      // For now, use a default user_id - in production this would come from authentication
+      const defaultUserId = '4bccc534-0a79-434a-b4d4-21672853262a'; // admin user from setup
+      
+      // Create or find client
+      let client = await Client.findByEmail(client_info.email || `${client_info.name.toLowerCase().replace(/\s+/g, '')}@temp.com`);
+      
+      if (!client) {
+        const clientData = {
+          assigned_planner_id: defaultUserId,
+          first_name: client_info.name.split(' ')[0] || client_info.name,
+          last_name: client_info.name.split(' ').slice(1).join(' ') || '',
+          email: client_info.email || `${client_info.name.toLowerCase().replace(/\s+/g, '')}@temp.com`,
+          phone: client_info.phone || null,
+          date_of_birth: client_info.date_of_birth || '1950-01-01', // Required field
+          marital_status: client_info.marital_status || 'single',
+          gohighlevel_contact_id: null // Will be populated later when goHighLevel integration is added
+        };
+        
+        client = await Client.create(clientData);
+        logger.info(`Created new client: ${client.id}`);
+      }
+      
+      // Add client_id to the result for frontend reference  
+      result.client_id = client.id;
+      
+    } catch (dbError) {
+      logger.error(`Database error while saving assessment: ${dbError.message}`);
+      // Don't fail the request if database save fails, but log it
     }
     
     logger.info('Successfully completed eligibility assessment');

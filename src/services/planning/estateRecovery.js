@@ -1,8 +1,8 @@
 // src/services/planning/estateRecovery.js
 
 const logger = require('../../config/logger');
-const medicaidRules = require('../../data/medicaid_rules_2025.json');
-const { getStateEstateRecovery } = require('../../data/estateRecovery');
+const { EstateRecoveryRules } = require('../../models');
+const { getMedicaidRules } = require('../utils/medicaidRulesLoader'); // Use existing medicaid rules loader
 
 function calculateEstateRecoveryThresholds(stateRules) {
   const homeEquityLimit = stateRules.homeEquityLimit || 713000;
@@ -75,76 +75,86 @@ function calculateRiskScore(assets, clientInfo, state, thresholds, stateRecovery
   return Math.max(0, Math.min(100, score));
 }
 
-function assessEstateRecoveryRisk(assets, state, clientInfo = {}) {
+async function assessEstateRecoveryRisk(assets, state, clientInfo = {}) {
   logger.debug(`Assessing estate recovery risk for ${state}`);
   
-  const stateKey = state.toLowerCase().replace(' ', '_');
-  const stateRules = medicaidRules[stateKey];
-  if (!stateRules) {
-    throw new Error(`Rules not found for state: ${state}`);
+  try {
+    const stateRules = getMedicaidRules(state);
+    const estateRecoveryData = await EstateRecoveryRules.findByState(state);
+    
+    if (!estateRecoveryData) {
+      throw new Error(`Estate recovery rules not found for state: ${state}`);
+    }
+    
+    const thresholds = calculateEstateRecoveryThresholds(stateRules);
+    const stateRecoveryLevel = estateRecoveryData.recovery_aggressiveness;
+  
+    const hasHome = !!assets.home;
+    const homeValue = assets.home || 0;
+    const totalAssets = Object.values(assets).reduce((sum, value) => sum + (value || 0), 0);
+    
+    const riskScore = calculateRiskScore(assets, clientInfo, state, thresholds, stateRecoveryLevel);
+    
+    // Adjust risk level thresholds for better alignment with test expectations
+    let riskLevel;
+    if (stateRecoveryLevel === 'none') {
+      riskLevel = 'low'; // States with no recovery are always low risk
+    } else if (stateRecoveryLevel === 'minimal' && riskScore < 60) {
+      riskLevel = 'low'; // Minimal recovery states with score < 60 are low risk
+    } else if (riskScore >= 70) {
+      riskLevel = 'high';
+    } else if (riskScore >= 40) {
+      riskLevel = 'medium';
+    } else {
+      riskLevel = 'low';
+    }
+    
+    const riskFactors = [];
+    
+    if (stateRecoveryLevel === 'aggressive' || stateRecoveryLevel === 'very_aggressive') {
+      riskFactors.push('State has aggressive recovery policies');
+    }
+    
+    if (hasHome && !estateRecoveryData.primary_residence_protected) {
+      riskFactors.push('Home not exempt from recovery');
+    }
+    
+    if (totalAssets > thresholds.mediumRiskAssetThreshold) {
+      riskFactors.push('Substantial total assets');
+    }
+    
+    if (clientInfo.age > 75) {
+      riskFactors.push('Age-related risk');
+    }
+    
+    return {
+      riskLevel,
+      riskScore,
+      hasHome,
+      totalAssets,
+      state: state.toUpperCase(),
+      homeValue,
+      thresholds,
+      stateRecoveryLevel,
+      riskFactors,
+      recoveryExemptions: estateRecoveryData.exceptions || []
+    };
+    
+  } catch (error) {
+    logger.error(`Error assessing estate recovery risk for ${state}: ${error.message}`);
+    throw error;
   }
-  
-  const estateRecoveryData = getStateEstateRecovery(stateKey);
-  const thresholds = calculateEstateRecoveryThresholds(stateRules);
-  const stateRecoveryLevel = estateRecoveryData.recoveryScope.aggressiveness;
-  
-  const hasHome = !!assets.home;
-  const homeValue = assets.home || 0;
-  const totalAssets = Object.values(assets).reduce((sum, value) => sum + (value || 0), 0);
-  
-  const riskScore = calculateRiskScore(assets, clientInfo, stateKey, thresholds, stateRecoveryLevel);
-  
-  // Adjust risk level thresholds for better alignment with test expectations
-  let riskLevel;
-  if (stateRecoveryLevel === 'none') {
-    riskLevel = 'low'; // States with no recovery are always low risk
-  } else if (stateRecoveryLevel === 'limited' && riskScore < 60) {
-    riskLevel = 'low'; // Limited recovery states with score < 60 are low risk
-  } else if (riskScore >= 70) {
-    riskLevel = 'high';
-  } else if (riskScore >= 40) {
-    riskLevel = 'medium';
-  } else {
-    riskLevel = 'low';
-  }
-  
-  const riskFactors = [];
-  
-  if (stateRecoveryLevel === 'aggressive') {
-    riskFactors.push('State has aggressive recovery policies');
-  }
-  
-  if (hasHome && !estateRecoveryData.homeExemptions.primary) {
-    riskFactors.push('Home not exempt from recovery');
-  }
-  
-  if (totalAssets > thresholds.mediumRiskAssetThreshold) {
-    riskFactors.push('Substantial total assets');
-  }
-  
-  if (clientInfo.age > 75) {
-    riskFactors.push('Age-related risk');
-  }
-  
-  return {
-    riskLevel,
-    riskScore,
-    hasHome,
-    totalAssets,
-    state: stateKey,
-    homeValue,
-    thresholds,
-    stateRecoveryLevel,
-    riskFactors,
-    recoveryExemptions: estateRecoveryData.recoveryWaivers.exemptHeirs
-  };
 }
 
-function developEstateRecoveryPlan(riskAssessment, clientInfo, assets, state) {
+async function developEstateRecoveryPlan(riskAssessment, clientInfo, assets, state) {
   logger.debug(`Developing estate recovery plan for ${state}`);
   
-  const stateKey = state.toLowerCase().replace(' ', '_');
-  const estateRecoveryData = getStateEstateRecovery(stateKey);
+  try {
+    const estateRecoveryData = await EstateRecoveryRules.findByState(state);
+    
+    if (!estateRecoveryData) {
+      throw new Error(`Estate recovery rules not found for state: ${state}`);
+    }
   
   const strategies = [];
   const implementationSteps = [];
@@ -409,14 +419,19 @@ function developEstateRecoveryPlan(riskAssessment, clientInfo, assets, state) {
               `Primary Strategies:\n` + strategies.slice(0, 3).map(s => `- ${s.name}`).join('\n') +
               `\n\nNext Steps:\n- Consult elder law attorney\n- Review state-specific recovery rules\n- Implement priority strategies`
   };
+  
+  } catch (error) {
+    logger.error(`Error developing estate recovery plan for ${state}: ${error.message}`);
+    throw error;
+  }
 }
 
 async function medicaidEstateRecoveryPlanning(clientInfo, assets, state) {
   logger.info(`Starting estate recovery planning process for ${state}`);
   
   try {
-    const riskAssessment = assessEstateRecoveryRisk(assets, state, clientInfo);
-    const plan = developEstateRecoveryPlan(riskAssessment, clientInfo, assets, state);
+    const riskAssessment = await assessEstateRecoveryRisk(assets, state, clientInfo);
+    const plan = await developEstateRecoveryPlan(riskAssessment, clientInfo, assets, state);
     
     const recommendations = [
       `Based on ${riskAssessment.riskLevel} risk assessment (score: ${riskAssessment.riskScore}/100), focus on ${typeof plan.strategies[0] === 'object' ? plan.strategies[0].name.toLowerCase() : plan.strategies[0].toLowerCase()}`,

@@ -1,7 +1,7 @@
 // src/services/eligibility/eligibilityAssessment.js
 const logger = require('../../config/logger');
 const medicaidRulesLoader = require('../utils/medicaidRulesLoader');
-const medicaidRules = require('../../data/medicaid_rules_2025.json');
+const { getMedicaidRules } = require('../utils/medicaidRulesLoader');
 
 /**
  * Helper function to safely extract state string
@@ -142,7 +142,7 @@ async function medicaidEligibilityAssessment(clientInfo, assets, income, state) 
 
     // Use normalizeStateKey to convert abbreviations to full state names
     const normalizedState = medicaidRulesLoader.normalizeStateKey(stateStr);
-    const rules = medicaidRules[normalizedState];
+    const rules = getMedicaidRules(normalizedState);
     if (!rules) {
       throw new Error(`No Medicaid rules found for state: ${stateStr}`);
     }
@@ -229,7 +229,7 @@ async function assessMedicaidEligibility(clientInfo, assets, income, medicalNeed
     
     // Get state-specific limits - FIX: Use normalizeStateKey to convert abbreviations
     const normalizedState = medicaidRulesLoader.normalizeStateKey(stateStr);
-    const stateRules = medicaidRules[normalizedState];
+    const stateRules = getMedicaidRules(normalizedState);
     if (!stateRules) {
       throw new Error(`Rules not found for state: ${stateStr}`);
     }

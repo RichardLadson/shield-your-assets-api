@@ -1,5 +1,5 @@
 const logger = require('../../config/logger');
-const medicaidRules = require('../../data/medicaid_rules_2025.json');
+const { getMedicaidRules } = require('../utils/medicaidRulesLoader');
 
 /**
  * Assesses the client's cognitive status based on medical information

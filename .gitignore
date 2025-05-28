@@ -11,3 +11,5 @@ coverage/
 
 # macOS system files
 .DS_Store
+# Superuser credentials - keep secure
+.env.superuser

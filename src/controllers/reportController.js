@@ -2,8 +2,10 @@
 const path = require('path');
 const fs = require('fs').promises;
 const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const logger = require('../config/logger');
 const MedicaidPlanningReportGenerator = require('../services/reporting/reportGenerator');
+const { Client, Assessment, Report } = require('../models');
 
 /**
  * Standardized response formatter
@@ -146,6 +148,66 @@ async function generateReport(req, res) {
     // Save the report to file using our helper function instead of reportGenerator.saveReport
     const saveResult = await saveReportToFile(reportContent, filename);
     
+    // Save report to database
+    try {
+      const defaultUserId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479'; // admin user from setup
+      
+      // Find client by name or email
+      let client = await Client.findByEmail(clientInfo.email || `${clientInfo.name.toLowerCase().replace(/\s+/g, '')}@temp.com`);
+      
+      if (!client) {
+        // Create client if not found
+        const clientData = {
+          user_id: defaultUserId,
+          first_name: clientInfo.name.split(' ')[0] || clientInfo.name,
+          last_name: clientInfo.name.split(' ').slice(1).join(' ') || '',
+          email: clientInfo.email || `${clientInfo.name.toLowerCase().replace(/\s+/g, '')}@temp.com`,
+          phone: clientInfo.phone || null,
+          date_of_birth: clientInfo.date_of_birth || null,
+          state: state,
+          gohighlevel_contact_id: null
+        };
+        
+        client = await Client.create(clientData);
+        logger.info(`Created new client for report: ${client.client_id}`);
+      }
+      
+      // Find the most recent assessment for this client
+      const assessments = await Assessment.findByClientId(client.client_id);
+      const latestAssessment = assessments[0]; // sorted by created_at DESC
+      
+      // Generate a shareable token for the report
+      const shareToken = crypto.randomBytes(32).toString('hex');
+      
+      // Save report to database
+      const reportData = {
+        assessment_id: latestAssessment ? latestAssessment.assessment_id : null,
+        client_id: client.client_id,
+        user_id: defaultUserId,
+        report_type: selectedReportType,
+        report_data: {
+          planningResults,
+          clientInfo,
+          reportType: selectedReportType,
+          outputFormat: selectedFormat,
+          generatedAt: new Date().toISOString(),
+          content: reportContent
+        },
+        file_path: saveResult.success ? saveResult.filePath : null,
+        share_token: shareToken
+      };
+      
+      const dbReport = await Report.create(reportData);
+      logger.info(`Saved report to database: ${dbReport.report_id}`);
+      
+      // Add database info to response
+      reportId = dbReport.report_id;
+      
+    } catch (dbError) {
+      logger.error(`Database error while saving report: ${dbError.message}`);
+      // Don't fail the request if database save fails, but log it
+    }
+    
     logger.info(`Successfully generated report with ID: ${reportId}`);
     
     // Ensure consistent response format
@@ -156,7 +218,8 @@ async function generateReport(req, res) {
       outputFormat: selectedFormat,
       generatedAt: new Date().toISOString(),
       content: reportContent,
-      filePath: saveResult.success ? saveResult.filePath : null
+      filePath: saveResult.success ? saveResult.filePath : null,
+      shareToken: shareToken || null
     }));
   } catch (error) {
     logger.error(`Error in generateReport controller: ${error.message}`);
@@ -252,7 +315,56 @@ async function downloadReport(req, res) {
   }
 }
 
+/**
+ * Get a report by share token (for client self-service access)
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ */
+async function getReportByToken(req, res) {
+  try {
+    const { token } = req.params;
+    
+    if (!token) {
+      logger.error('Share token is required');
+      return res.status(400).json({
+        status: 'error',
+        message: 'Share token is required'
+      });
+    }
+    
+    // Find report by share token
+    const report = await Report.findByShareToken(token);
+    
+    if (!report) {
+      logger.error(`Report with token ${token} not found`);
+      return res.status(404).json({
+        status: 'error',
+        message: 'Report not found or token is invalid'
+      });
+    }
+    
+    logger.info(`Retrieved report by token: ${report.report_id}`);
+    
+    // Return report data with client info
+    return res.status(200).json(formatResponse({
+      reportId: report.report_id,
+      clientName: `${report.first_name} ${report.last_name}`,
+      reportType: report.report_type,
+      generatedAt: report.created_at,
+      reportData: report.report_data
+    }));
+    
+  } catch (error) {
+    logger.error(`Error in getReportByToken controller: ${error.message}`);
+    return res.status(500).json({
+      status: 'error',
+      message: error.message
+    });
+  }
+}
+
 module.exports = {
   generateReport,
-  downloadReport
+  downloadReport,
+  getReportByToken
 };

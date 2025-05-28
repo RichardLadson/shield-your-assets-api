@@ -9,4 +9,7 @@ router.post('/generate', reportController.generateReport);
 // GET route for downloading reports
 router.get('/download/:reportId', reportController.downloadReport);
 
+// GET route for accessing reports by share token (for client self-service)
+router.get('/shared/:token', reportController.getReportByToken);
+
 module.exports = router;

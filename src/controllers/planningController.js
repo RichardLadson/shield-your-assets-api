@@ -7,6 +7,7 @@ const { medicaidTrustPlanning } = require('../services/planning/trustPlanning');
 const { medicaidAnnuityPlanning } = require('../services/planning/annuityPlanning');
 const { medicaidDivestmentPlanning } = require('../services/planning/divestmentPlanning');
 const { medicaidCarePlanning } = require('../services/planning/carePlanning');
+const { Client, Assessment, Plan } = require('../models');
 
 /**
  * Standardized response formatter
@@ -96,6 +97,64 @@ exports.comprehensivePlanning = async (req, res) => {
     if (planningResult.status === 'error') {
       logger.error(`Comprehensive planning failed: ${planningResult.error}`);
       return res.status(400).json(planningResult);
+    }
+    
+    // Save planning results to database
+    try {
+      const defaultUserId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479'; // admin user from setup
+      
+      // Find or create client
+      let client = await Client.findByEmail(client_info.email || `${client_info.name.toLowerCase().replace(/\s+/g, '')}@temp.com`);
+      
+      if (!client) {
+        const clientData = {
+          user_id: defaultUserId,
+          first_name: client_info.name.split(' ')[0] || client_info.name,
+          last_name: client_info.name.split(' ').slice(1).join(' ') || '',
+          email: client_info.email || `${client_info.name.toLowerCase().replace(/\s+/g, '')}@temp.com`,
+          phone: client_info.phone || null,
+          date_of_birth: client_info.date_of_birth || null,
+          spouse_first_name: client_info.spouse_name ? client_info.spouse_name.split(' ')[0] : null,
+          spouse_last_name: client_info.spouse_name ? client_info.spouse_name.split(' ').slice(1).join(' ') : null,
+          state: state,
+          gohighlevel_contact_id: null
+        };
+        
+        client = await Client.create(clientData);
+        logger.info(`Created new client for planning: ${client.client_id}`);
+      }
+      
+      // Find the most recent assessment for this client
+      const assessments = await Assessment.findByClientId(client.client_id);
+      const latestAssessment = assessments[0]; // sorted by created_at DESC
+      
+      // Save planning results - create a plan for each strategy in the result
+      if (planningResult.strategies && Array.isArray(planningResult.strategies)) {
+        for (const strategy of planningResult.strategies) {
+          const planData = {
+            assessment_id: latestAssessment ? latestAssessment.assessment_id : null,
+            client_id: client.client_id,
+            user_id: defaultUserId,
+            plan_type: strategy.type || 'comprehensive',
+            plan_data: strategy,
+            implementation_steps: strategy.steps || [],
+            priority_score: strategy.priority || 50
+          };
+          
+          const plan = await Plan.create(planData);
+          logger.info(`Created plan: ${plan.plan_id} for strategy: ${strategy.type}`);
+        }
+      }
+      
+      // Add client_id to result for frontend reference
+      planningResult.client_id = client.client_id;
+      if (latestAssessment) {
+        planningResult.assessment_id = latestAssessment.assessment_id;
+      }
+      
+    } catch (dbError) {
+      logger.error(`Database error while saving planning results: ${dbError.message}`);
+      // Don't fail the request if database save fails, but log it
     }
     
     // Ensure consistent response format
