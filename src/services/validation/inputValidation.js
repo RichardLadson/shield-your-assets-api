@@ -4,42 +4,83 @@ const logger = require('../../config/logger');
 const { normalizeStateKey, loadMedicaidRules } = require('../utils/medicaidRulesLoader');
 const { ValidationError, StateNotFoundError } = require('./validationErrors');
 
-// Client info validation schema
+// Configurable validation thresholds - can be overridden by environment variables
+const VALIDATION_THRESHOLDS = {
+  maxAge: parseInt(process.env.MAX_AGE_THRESHOLD) || 120,
+  maxTotalAssets: parseInt(process.env.MAX_TOTAL_ASSETS_THRESHOLD) || 10000000,
+  maxHomeValue: parseInt(process.env.MAX_HOME_VALUE_THRESHOLD) || 5000000,
+  maxMonthlyIncome: parseInt(process.env.MAX_MONTHLY_INCOME_THRESHOLD) || 50000,
+  maxSocialSecurityIncome: parseInt(process.env.MAX_SS_INCOME_THRESHOLD) || 4000
+};
+
+// Client info validation schema - using snake_case for consistency
 const clientInfoSchema = Joi.object({
-  name: Joi.string().trim().required().messages({
-    'any.required': 'Name is required',
+  // Support both full name and separate first/last names
+  name: Joi.string().trim().optional().messages({
     'string.empty': 'Name cannot be empty'
   }),
-  age: Joi.number().min(0).required().messages({
-    'any.required': 'Age is required',
+  first_name: Joi.string().trim().optional().messages({
+    'string.empty': 'First name cannot be empty'
+  }),
+  last_name: Joi.string().trim().optional().messages({
+    'string.empty': 'Last name cannot be empty'
+  }),
+  email: Joi.string().email().required().messages({
+    'any.required': 'Email is required',
+    'string.email': 'Email must be a valid email address',
+    'string.empty': 'Email cannot be empty'
+  }),
+  age: Joi.number().min(0).optional().messages({
     'number.base': 'Age must be a number',
     'number.min': 'Age must be a positive number'
   }),
-  maritalStatus: Joi.string().valid('single', 'married', 'divorced', 'widowed', 'separated').required().messages({
+  date_of_birth: Joi.date().iso().optional().messages({
+    'date.format': 'Date of birth must be in YYYY-MM-DD format'
+  }),
+  marital_status: Joi.string().valid('single', 'married', 'divorced', 'widowed', 'separated').required().messages({
     'any.required': 'Marital status is required',
     'any.only': 'Marital status must be one of: single, married, divorced, widowed, separated'
   }),
-  healthStatus: Joi.string().valid('good', 'fair', 'declining', 'critical').optional().messages({
+  health_status: Joi.string().valid('good', 'fair', 'declining', 'critical').optional().messages({
     'any.only': 'Health status must be one of: good, fair, declining, critical'
   })
-}).unknown(true); // Allow additional fields
+})
+.or('age', 'date_of_birth').messages({
+  'object.missing': 'Either age or date of birth is required'
+})
+.or('name', 'first_name').messages({
+  'object.missing': 'Either full name or first name is required'
+})
+.unknown(true); // Allow additional fields
 
-// Assets validation schema
+// Assets validation schema - allow strings that can be converted to numbers
 const assetsSchema = Joi.object().pattern(
   Joi.string(),
-  Joi.number().min(0)
+  Joi.alternatives().try(
+    Joi.number().min(0),
+    Joi.string().pattern(/^\d+(\.\d+)?$/).messages({
+      'string.pattern.base': 'Asset values must be valid numbers'
+    })
+  ).messages({
+    'alternatives.match': 'Asset values must be numbers or numeric strings'
+  })
 ).min(1).messages({
-  'object.min': 'At least one asset must be provided',
-  'number.min': 'Asset values must be positive numbers'
+  'object.min': 'At least one asset must be provided'
 });
 
-// Income validation schema
+// Income validation schema - allow strings that can be converted to numbers
 const incomeSchema = Joi.object().pattern(
   Joi.string(),
-  Joi.number().min(0)
+  Joi.alternatives().try(
+    Joi.number().min(0),
+    Joi.string().pattern(/^\d+(\.\d+)?$/).messages({
+      'string.pattern.base': 'Income values must be valid numbers'
+    })
+  ).messages({
+    'alternatives.match': 'Income values must be numbers or numeric strings'
+  })
 ).min(1).messages({
-  'object.min': 'At least one income source must be provided',
-  'number.min': 'Income values must be positive numbers'
+  'object.min': 'At least one income source must be provided'
 });
 
 // Expenses validation schema
@@ -71,47 +112,53 @@ const homeInfoSchema = Joi.object({
  */
 function validateClientInfo(clientInfo) {
   try {
-    logger.debug(`Raw clientInfo input: ${JSON.stringify(clientInfo)}`);
-    logger.debug('Validating client information');
+    // Log validation without PII - only log field names for debugging
+    const fieldNames = clientInfo ? Object.keys(clientInfo) : [];
+    logger.debug(`Validating client information with fields: [${fieldNames.join(', ')}]`);
 
     if (!clientInfo) {
       throw new ValidationError('Client information is required');
     }
 
-    // Normalize field names to camelCase
+    // Normalize field names to snake_case for consistency
     const normalizedClientInfo = {};
     for (const [key, value] of Object.entries(clientInfo)) {
-      const camelKey = key.replace(/[-_\s](.)/g, (_, c) => c.toUpperCase());
-      normalizedClientInfo[camelKey] = value;
+      const snakeKey = key.toLowerCase().replace(/[-\s]/g, '_');
+      normalizedClientInfo[snakeKey] = value;
     }
-    logger.debug(`Normalized clientInfo: ${JSON.stringify(normalizedClientInfo)}`);
+    logger.debug(`Normalized field names: [${Object.keys(normalizedClientInfo).join(', ')}]`);
 
     // Normalize specific fields
-    if (normalizedClientInfo.maritalStatus) {
-      normalizedClientInfo.maritalStatus = normalizedClientInfo.maritalStatus.toLowerCase().trim();
+    if (normalizedClientInfo.marital_status) {
+      normalizedClientInfo.marital_status = normalizedClientInfo.marital_status.toLowerCase().trim();
     }
-    if (normalizedClientInfo.healthStatus) {
-      normalizedClientInfo.healthStatus = normalizedClientInfo.healthStatus.toLowerCase().trim();
+    if (normalizedClientInfo.health_status) {
+      normalizedClientInfo.health_status = normalizedClientInfo.health_status.toLowerCase().trim();
     }
 
     // Validate with Joi
     const { error, value } = clientInfoSchema.validate(normalizedClientInfo, { abortEarly: false });
-    logger.debug(`Joi validation result: ${JSON.stringify({ error, value })}`);
+    // Log validation result without PII - only success/failure and error types
+    if (error) {
+      logger.debug(`Joi validation failed with ${error.details.length} errors`);
+    } else {
+      logger.debug('Joi validation successful');
+    }
     if (error) {
       const errorMessage = error.details.map(detail => detail.message).join('; ');
       logger.error(`Client info validation error: ${errorMessage}`);
       throw new ValidationError(`Invalid client info: ${errorMessage}`);
     }
 
-    // Warn for unusual values
-    if (value.age > 120) {
-      logger.warn(`Client age ${value.age} seems unusually high, verify accuracy`);
+    // Warn for unusual values using configurable thresholds
+    if (value.age > VALIDATION_THRESHOLDS.maxAge) {
+      logger.warn(`Client age ${value.age} exceeds threshold (${VALIDATION_THRESHOLDS.maxAge}), verify accuracy`);
     }
     const hasSpouseInfo = Object.keys(normalizedClientInfo).some(key => key.startsWith('spouse'));
-    if (hasSpouseInfo && value.maritalStatus !== 'married') {
-      logger.warn(`Client has spouse information but marital status is ${value.maritalStatus}`);
+    if (hasSpouseInfo && value.marital_status !== 'married') {
+      logger.warn(`Client has spouse information but marital status is ${value.marital_status}`);
     }
-    if (normalizedClientInfo.isCrisis && value.healthStatus === 'good') {
+    if (normalizedClientInfo.is_crisis && value.health_status === 'good') {
       logger.warn('Client marked as crisis but health status is good, verify accuracy');
     }
 
@@ -144,7 +191,9 @@ function validateClientInfo(clientInfo) {
  */
 function validateAssets(assets) {
   try {
-    logger.debug('Validating assets');
+    // Log validation without sensitive values - only asset types
+    const assetTypes = assets ? Object.keys(assets) : [];
+    logger.debug(`Validating assets with types: [${assetTypes.join(', ')}]`);
 
     if (!assets) {
       throw new ValidationError('Assets are required');
@@ -154,14 +203,10 @@ function validateAssets(assets) {
     const normalizedAssets = {};
     for (const [key, value] of Object.entries(assets)) {
       const normalizedKey = key.toLowerCase().replace(/\s+/g, '_');
-      let normalizedValue = value;
-      if (typeof value === 'string') {
-        const numValue = parseFloat(value);
-        if (!isNaN(numValue)) {
-          normalizedValue = numValue;
-        }
-      }
-      normalizedAssets[normalizedKey] = normalizedValue;
+      
+      // Don't silently convert strings to numbers - let Joi validation handle type checking
+      // This preserves user input and makes validation errors explicit
+      normalizedAssets[normalizedKey] = value;
     }
 
     // Validate with Joi
@@ -172,19 +217,25 @@ function validateAssets(assets) {
       throw new ValidationError(`Invalid assets: ${errorMessage}`);
     }
 
-    // Warn for unusually high values
-    const totalAssets = Object.values(value).reduce((sum, val) => sum + val, 0);
-    if (totalAssets > 10000000) {
-      logger.warn(`Total assets value (${totalAssets}) is unusually high, verify accuracy`);
+    // After validation, explicitly convert string numbers to numbers
+    const convertedAssets = {};
+    for (const [key, val] of Object.entries(value)) {
+      convertedAssets[key] = typeof val === 'string' ? parseFloat(val) : val;
     }
-    if (value.home && value.home > 5000000) {
-      logger.warn(`Home value (${value.home}) is unusually high, verify accuracy`);
+
+    // Warn for unusually high values using configurable thresholds
+    const totalAssets = Object.values(convertedAssets).reduce((sum, val) => sum + val, 0);
+    if (totalAssets > VALIDATION_THRESHOLDS.maxTotalAssets) {
+      logger.warn(`Total assets value (${totalAssets}) exceeds threshold (${VALIDATION_THRESHOLDS.maxTotalAssets}), verify accuracy`);
+    }
+    if (convertedAssets.home && convertedAssets.home > VALIDATION_THRESHOLDS.maxHomeValue) {
+      logger.warn(`Home value (${convertedAssets.home}) exceeds threshold (${VALIDATION_THRESHOLDS.maxHomeValue}), verify accuracy`);
     }
 
     return {
       valid: true,
       message: '',
-      normalizedData: value
+      normalizedData: convertedAssets
     };
   } catch (error) {
     if (error instanceof ValidationError) {
@@ -210,8 +261,9 @@ function validateAssets(assets) {
  */
 function validateIncome(income) {
   try {
-    logger.debug(`Raw income input: ${JSON.stringify(income)}`);
-    logger.debug('Validating income');
+    // Log validation without sensitive values - only income types
+    const incomeTypes = income ? Object.keys(income) : [];
+    logger.debug(`Validating income with types: [${incomeTypes.join(', ')}]`);
 
     // Handle null, undefined, or empty income (make it optional)
     if (!income || Object.keys(income).length === 0) {
@@ -227,39 +279,45 @@ function validateIncome(income) {
     const normalizedIncome = {};
     for (const [key, value] of Object.entries(income)) {
       const normalizedKey = key.toLowerCase().replace(/\s+/g, '_');
-      let normalizedValue = value;
-      if (typeof value === 'string') {
-        const numValue = parseFloat(value);
-        if (!isNaN(numValue)) {
-          normalizedValue = numValue;
-        }
-      }
-      normalizedIncome[normalizedKey] = normalizedValue;
+      
+      // Don't silently convert strings to numbers - let Joi validation handle type checking
+      // This preserves user input and makes validation errors explicit
+      normalizedIncome[normalizedKey] = value;
     }
-    logger.debug(`Normalized income: ${JSON.stringify(normalizedIncome)}`);
+    logger.debug(`Normalized income types: [${Object.keys(normalizedIncome).join(', ')}]`);
 
     // Validate with Joi
     const { error, value } = incomeSchema.validate(normalizedIncome, { abortEarly: false });
-    logger.debug(`Joi validation result: ${JSON.stringify({ error, value })}`);
+    if (error) {
+      logger.debug(`Income validation failed with ${error.details.length} errors`);
+    } else {
+      logger.debug('Income validation successful');
+    }
     if (error) {
       const errorMessage = error.details.map(detail => detail.message).join('; ');
       logger.error(`Income validation error: ${errorMessage}`);
       throw new ValidationError(`Invalid income: ${errorMessage}`);
     }
 
-    // Warn for unusually high values
-    const totalIncome = Object.values(value).reduce((sum, val) => sum + val, 0);
-    if (totalIncome > 50000) {
-      logger.warn(`Total monthly income (${totalIncome}) is unusually high, verify accuracy`);
+    // After validation, explicitly convert string numbers to numbers
+    const convertedIncome = {};
+    for (const [key, val] of Object.entries(value)) {
+      convertedIncome[key] = typeof val === 'string' ? parseFloat(val) : val;
     }
-    if (value.social_security && value.social_security > 4000) {
-      logger.warn(`Social Security income (${value.social_security}) is unusually high, verify accuracy`);
+
+    // Warn for unusually high values using configurable thresholds
+    const totalIncome = Object.values(convertedIncome).reduce((sum, val) => sum + val, 0);
+    if (totalIncome > VALIDATION_THRESHOLDS.maxMonthlyIncome) {
+      logger.warn(`Total monthly income (${totalIncome}) exceeds threshold (${VALIDATION_THRESHOLDS.maxMonthlyIncome}), verify accuracy`);
+    }
+    if (convertedIncome.social_security && convertedIncome.social_security > VALIDATION_THRESHOLDS.maxSocialSecurityIncome) {
+      logger.warn(`Social Security income (${convertedIncome.social_security}) exceeds threshold (${VALIDATION_THRESHOLDS.maxSocialSecurityIncome}), verify accuracy`);
     }
 
     return {
       valid: true,
       message: '',
-      normalizedData: value
+      normalizedData: convertedIncome
     };
   } catch (error) {
     if (error instanceof ValidationError) {

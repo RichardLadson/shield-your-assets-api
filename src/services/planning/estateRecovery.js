@@ -348,7 +348,7 @@ async function developEstateRecoveryPlan(riskAssessment, clientInfo, assets, sta
   }
   
   // Special strategies based on specific circumstances
-  if (riskAssessment.hasHome && !estateRecoveryData.homeExemptions.primary) {
+  if (riskAssessment.hasHome && !estateRecoveryData.primary_residence_protected) {
     strategies.push({
       id: `estate-${strategyId++}`,
       type: 'home-protection',
@@ -376,7 +376,7 @@ async function developEstateRecoveryPlan(riskAssessment, clientInfo, assets, sta
   }
   
   // Hardship waiver strategy if available
-  if (estateRecoveryData.recoveryWaivers.hardshipAvailable) {
+  if (estateRecoveryData.optional_recovery || (estateRecoveryData.exceptions && estateRecoveryData.exceptions.includes('hardship'))) {
     strategies.push({
       id: `estate-${strategyId++}`,
       type: 'hardship-waiver',

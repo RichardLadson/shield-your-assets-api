@@ -870,7 +870,7 @@ async function medicaidCarePlanning(clientInfo, medicalInfo, livingInfo, state) 
     if (medicalInfo?.mockError === true) {
       throw new Error("Mock assessment error");
     }
-    const rules = medicaidRules[state.toLowerCase()] || {};
+    const rules = getMedicaidRules(state);
     const financialInfo = clientInfo?.financialInfo || {};
     const preferenceInfo = clientInfo?.preferenceInfo || {};
     const careNeeds = assessCareNeeds(medicalInfo, livingInfo, financialInfo, preferenceInfo, state, rules);

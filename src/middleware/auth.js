@@ -88,7 +88,7 @@ function generateToken(user) {
       role: user.role 
     },
     JWT_SECRET,
-    { expiresIn: '7d' } // Token expires in 7 days
+    { expiresIn: '24h' } // Token expires in 24 hours - more secure
   );
 }
 

@@ -27,7 +27,7 @@ function assessCommunitySpouseNeeds(clientInfo, assets, income, expenses, state)
   const spouseInfo = clientInfo.spouseInfo || {};
 
   // Get state rules
-  const rules = medicaidRules[state.toLowerCase()];
+  const rules = getMedicaidRules(state);
   if (!rules) {
     throw new Error(`No Medicaid rules found for state: ${state}`);
   }
@@ -117,7 +117,7 @@ function calculateCSRA(totalAssets, clientInfo, state) {
   }
 
   // Get state rules
-  const rules = medicaidRules[state.toLowerCase()];
+  const rules = getMedicaidRules(state);
   if (!rules) {
     throw new Error(`No Medicaid rules found for state: ${state}`);
   }
@@ -202,7 +202,7 @@ function calculateMMNA(spouseNeeds, clientInfo, state) {
   }
 
   // Get state rules
-  const rules = medicaidRules[state.toLowerCase()];
+  const rules = getMedicaidRules(state);
   if (!rules) {
     throw new Error(`No Medicaid rules found for state: ${state}`);
   }

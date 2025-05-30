@@ -8,6 +8,8 @@ coverage/
 
 # Environment variables
 .env
+.env.*
+!.env.example
 
 # macOS system files
 .DS_Store

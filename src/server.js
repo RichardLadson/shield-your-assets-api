@@ -4,6 +4,57 @@ const app = require('./app');
 const logger = require('./config/logger');
 const config = require('./config/config');
 
+// Environment variable validation
+function validateEnvironment() {
+  const requiredVars = [
+    'DB_HOST',
+    'DB_PORT', 
+    'DB_NAME',
+    'DB_USER',
+    'DB_PASSWORD',
+    'JWT_SECRET'
+  ];
+  
+  const missingVars = requiredVars.filter(varName => !process.env[varName]);
+  
+  if (missingVars.length > 0) {
+    logger.error(`Missing required environment variables: ${missingVars.join(', ')}`);
+    console.error(`❌ Missing required environment variables: ${missingVars.join(', ')}`);
+    console.error('Please check your .env file and ensure all required variables are set.');
+    process.exit(1);
+  }
+  
+  // Validate JWT_SECRET strength
+  if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
+    logger.error('JWT_SECRET must be at least 32 characters long for security');
+    console.error('❌ JWT_SECRET too short - must be at least 32 characters');
+    process.exit(1);
+  }
+  
+  // Validate optional but recommended variables for production
+  const productionRecommended = ['CORS_ORIGIN', 'AWS_REGION', 'APP_URL'];
+  const missingProdRecommended = productionRecommended.filter(varName => !process.env[varName]);
+  
+  if (process.env.NODE_ENV === 'production' && missingProdRecommended.length > 0) {
+    logger.warn(`Production-recommended environment variables not set: ${missingProdRecommended.join(', ')}`);
+    console.warn(`⚠️  Production-recommended variables missing: ${missingProdRecommended.join(', ')}`);
+  }
+  
+  // Validate optional integration variables
+  const optionalVars = ['GHL_CLIENT_ID', 'GHL_CLIENT_SECRET', 'DEFAULT_PLANNER_ID'];
+  const missingOptional = optionalVars.filter(varName => !process.env[varName]);
+  
+  if (missingOptional.length > 0) {
+    logger.info(`Optional integration variables not set: ${missingOptional.join(', ')}`);
+  }
+  
+  console.log('✅ Environment validation passed');
+  logger.info('Environment validation completed successfully');
+}
+
+// Validate environment variables before starting
+validateEnvironment();
+
 // Add debugging for startup
 console.log('🚀 Starting server...');
 console.log('📍 Current directory:', process.cwd());

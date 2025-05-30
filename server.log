@@ -1,0 +1,394 @@
+
+> shield-your-assets-api@1.0.0 start
+> node src/server.js
+
+{"level":"warn","message":"GoHighLevel integration not configured - missing API key or location ID","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:34"}
+[33mwarn[39m: GoHighLevel integration not configured - missing API key or location ID {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:34"}
+🚀 Starting server...
+📍 Current directory: /Users/richardladson/Documents/web_dev/medicaid_planning/backend/shield-your-assets-api
+🔧 Node version: v23.11.0
+🔧 Environment: development
+{"level":"info","message":"CORS configuration: [\"http://localhost:8080\",\"https://05cc14f2-4909-4c06-9af5-7bc54650b4a7.lovableproject.com\"]","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:34"}
+[32minfo[39m: CORS configuration: ["http://localhost:8080","https://05cc14f2-4909-4c06-9af5-7bc54650b4a7.lovableproject.com"] {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:34"}
+📄 server.js loaded completely
+✅ Server successfully started on port 3001
+{"level":"info","message":"Server running on port 3001","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:34"}
+[32minfo[39m: Server running on port 3001 {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:34"}
+{"level":"info","message":"Environment: development","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:34"}
+[32minfo[39m: Environment: development {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:34"}
+{"level":"info","message":"Server started at: 2025-05-30T05:30:34.554Z","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:34"}
+[32minfo[39m: Server started at: 2025-05-30T05:30:34.554Z {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:34"}
+🏃 Server is running and listening for requests...
+{"level":"info","message":"POST /api/planning/comprehensive","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:52"}
+[32minfo[39m: POST /api/planning/comprehensive {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:52"}
+{"level":"info","message":"📥 Planning controller received request","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:52"}
+[32minfo[39m: 📥 Planning controller received request {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:52"}
+{"0":"state","1":"client_info","2":"assets","3":"income","4":"medical_data","level":"info","message":"📥 Request body keys:","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:52"}
+[32minfo[39m: 📥 Request body keys: {"0":"state","1":"client_info","2":"assets","3":"income","4":"medical_data","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:52"}
+{"level":"info","message":"📥 Full request body: {\n  \"state\": \"FL\",\n  \"client_info\": {\n    \"name\": \"Complete Test User\",\n    \"age\": 72,\n    \"email\": \"complete.test@example.com\",\n    \"state\": \"FL\",\n    \"marital_status\": \"married\"\n  },\n  \"assets\": {\n    \"total_value\": 200000,\n    \"home\": 300000,\n    \"cash\": 100000,\n    \"retirement_accounts\": 100000\n  },\n  \"income\": {\n    \"monthly_total\": 4000,\n    \"social_security\": 2500,\n    \"pension\": 1500\n  },\n  \"medical_data\": {\n    \"current_care_setting\": \"home\",\n    \"needs_nursing_home\": true\n  }\n}","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:52"}
+[32minfo[39m: 📥 Full request body: {
+  "state": "FL",
+  "client_info": {
+    "name": "Complete Test User",
+    "age": 72,
+    "email": "complete.test@example.com",
+    "state": "FL",
+    "marital_status": "married"
+  },
+  "assets": {
+    "total_value": 200000,
+    "home": 300000,
+    "cash": 100000,
+    "retirement_accounts": 100000
+  },
+  "income": {
+    "monthly_total": 4000,
+    "social_security": 2500,
+    "pension": 1500
+  },
+  "medical_data": {
+    "current_care_setting": "home",
+    "needs_nursing_home": true
+  }
+} {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:52"}
+{"clientInfoKeys":["name","age","email","state","marital_status"],"hasAssets":true,"hasClientInfo":true,"hasIncome":true,"hasState":true,"level":"info","message":"📊 Extracted fields:","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:52"}
+[32minfo[39m: 📊 Extracted fields: {"clientInfoKeys":["name","age","email","state","marital_status"],"hasAssets":true,"hasClientInfo":true,"hasIncome":true,"hasState":true,"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:52"}
+{"level":"info","message":"Starting comprehensive planning for Complete Test User in FL","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:52"}
+[32minfo[39m: Starting comprehensive planning for Complete Test User in FL {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:52"}
+{"level":"info","message":"Starting comprehensive Medicaid planning for FL","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:52"}
+[32minfo[39m: Starting comprehensive Medicaid planning for FL {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:52"}
+{"level":"info","message":"Starting validation of all inputs","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:52"}
+[32minfo[39m: Starting validation of all inputs {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:52"}
+📊 New PostgreSQL connection established
+{"level":"info","message":"All inputs validated successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: All inputs validated successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Starting care planning for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Starting care planning for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Care planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Care planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Starting eligibility assessment for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Starting eligibility assessment for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Eligibility assessment completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Eligibility assessment completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Starting related benefits planning for undefined","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Starting related benefits planning for undefined {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Starting asset planning for client in florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Starting asset planning for client in florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Starting validation of all inputs","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Starting validation of all inputs {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"All inputs validated successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: All inputs validated successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Asset planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Asset planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Starting income planning for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Starting income planning for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"warn","message":"No spouse income provided for married client in florida; defaulting to 0","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[33mwarn[39m: No spouse income provided for married client in florida; defaulting to 0 {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Income planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Income planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Starting trust planning process for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Starting trust planning process for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Trust planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Trust planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Starting annuity planning for client in [object Object]","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Starting annuity planning for client in [object Object] {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Starting annuity planning for client in [object Object]","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Starting annuity planning for client in [object Object] {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Starting comprehensive divestment planning for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Starting comprehensive divestment planning for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Starting community spouse planning for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Starting community spouse planning for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Community spouse planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Community spouse planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Starting Medicaid application planning for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Starting Medicaid application planning for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Starting estate recovery planning process for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Starting estate recovery planning process for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+Executed query {
+  text: 'SELECT * FROM estate_recovery_rules WHERE state = $1',
+  duration: 4,
+  rows: 1
+}
+Executed query {
+  text: 'SELECT * FROM estate_recovery_rules WHERE state = $1',
+  duration: 1,
+  rows: 1
+}
+{"level":"info","message":"Estate recovery planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Estate recovery planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Asset strategies found: [{\"id\":\"asset-1\",\"type\":\"irrevocable-trust\",\"name\":\"Irrevocable Asset Protection Trust\",\"description\":\"Transfer excess assets to an irrevocable trust for long-term protection and legacy planning.\",\"pros\":[\"Protects assets for heirs\",\"Removes assets from estate\",\"Professional management available\",\"Can include special provisions\"],\"cons\":[\"5-year look-back period applies\",\"Loss of direct control\",\"Cannot be modified easily\",\"Setup and maintenance costs\"],\"effectiveness\":\"High\",\"timing\":\"Implement 5+ years before need\",\"estimatedCost\":\"$3,000-$10,000 setup plus annual fees\",\"monthlyImpact\":\"Eligibility after 5-year period\",\"specificActions\":[\"Choose experienced elder law attorney\",\"Select appropriate trustees\",\"Define distribution terms\",\"Include Medicaid protection language\",\"Consider retained life estate\"]},{\"id\":\"asset-2\",\"type\":\"medicaid-annuity\",\"name\":\"Spousal Medicaid-Compliant Annuity\",\"description\":\"Convert excess resources to income stream for community spouse protection.\",\"pros\":[\"Protects resources for at-home spouse\",\"Immediate Medicaid eligibility\",\"Guaranteed income for spouse\",\"No transfer penalty\"],\"cons\":[\"Irrevocable decision\",\"Must name state as beneficiary\",\"Income affects eligibility\",\"Limited flexibility\"],\"effectiveness\":\"High\",\"timing\":\"Immediately before application\",\"estimatedCost\":\"$0-$1,000 in fees\",\"monthlyImpact\":\"Converts $397,000 to income\"}]","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Asset strategies found: [{"id":"asset-1","type":"irrevocable-trust","name":"Irrevocable Asset Protection Trust","description":"Transfer excess assets to an irrevocable trust for long-term protection and legacy planning.","pros":["Protects assets for heirs","Removes assets from estate","Professional management available","Can include special provisions"],"cons":["5-year look-back period applies","Loss of direct control","Cannot be modified easily","Setup and maintenance costs"],"effectiveness":"High","timing":"Implement 5+ years before need","estimatedCost":"$3,000-$10,000 setup plus annual fees","monthlyImpact":"Eligibility after 5-year period","specificActions":["Choose experienced elder law attorney","Select appropriate trustees","Define distribution terms","Include Medicaid protection language","Consider retained life estate"]},{"id":"asset-2","type":"medicaid-annuity","name":"Spousal Medicaid-Compliant Annuity","description":"Convert excess resources to income stream for community spouse protection.","pros":["Protects resources for at-home spouse","Immediate Medicaid eligibility","Guaranteed income for spouse","No transfer penalty"],"cons":["Irrevocable decision","Must name state as beneficiary","Income affects eligibility","Limited flexibility"],"effectiveness":"High","timing":"Immediately before application","estimatedCost":"$0-$1,000 in fees","monthlyImpact":"Converts $397,000 to income"}] {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Trust strategies found: []","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Trust strategies found: [] {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Total strategies generated: 10","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Total strategies generated: 10 {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"Comprehensive Medicaid planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Comprehensive Medicaid planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+Executed query {
+  text: 'SELECT * FROM clients WHERE email = $1',
+  duration: 2,
+  rows: 0
+}
+Executed query {
+  text: '\n' +
+    '      INSERT INTO clients (\n' +
+    '        assigned_planner_id, first_name, last_name, email, phone, \n' +
+    '        date_of_birth, marital_status, gohighlevel_contact_id\n' +
+    '      )\n' +
+    '      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n' +
+    '      RETURNING *\n' +
+    '    ',
+  duration: 4,
+  rows: 1
+}
+{"level":"info","message":"Created new client for planning: undefined","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[32minfo[39m: Created new client for planning: undefined {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+Executed query {
+  text: 'SELECT * FROM assessments WHERE client_id = $1 ORDER BY created_at DESC',
+  duration: 2,
+  rows: 0
+}
+{"level":"error","message":"Database error while saving planning results: column \"priority_score\" of relation \"plans\" does not exist","service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+[31merror[39m: Database error while saving planning results: column "priority_score" of relation "plans" does not exist {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:30:53"}
+{"level":"info","message":"POST /api/planning/comprehensive","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: POST /api/planning/comprehensive {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"📥 Planning controller received request","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: 📥 Planning controller received request {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"0":"state","1":"client_info","2":"assets","3":"income","4":"medical_data","level":"info","message":"📥 Request body keys:","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: 📥 Request body keys: {"0":"state","1":"client_info","2":"assets","3":"income","4":"medical_data","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"📥 Full request body: {\n  \"state\": \"FL\",\n  \"client_info\": {\n    \"name\": \"Complete Test User\",\n    \"age\": 72,\n    \"email\": \"complete.test@example.com\",\n    \"state\": \"FL\",\n    \"marital_status\": \"married\"\n  },\n  \"assets\": {\n    \"total_value\": 200000,\n    \"home\": 300000,\n    \"cash\": 100000,\n    \"retirement_accounts\": 100000\n  },\n  \"income\": {\n    \"monthly_total\": 4000,\n    \"social_security\": 2500,\n    \"pension\": 1500\n  },\n  \"medical_data\": {\n    \"current_care_setting\": \"home\",\n    \"needs_nursing_home\": true\n  }\n}","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: 📥 Full request body: {
+  "state": "FL",
+  "client_info": {
+    "name": "Complete Test User",
+    "age": 72,
+    "email": "complete.test@example.com",
+    "state": "FL",
+    "marital_status": "married"
+  },
+  "assets": {
+    "total_value": 200000,
+    "home": 300000,
+    "cash": 100000,
+    "retirement_accounts": 100000
+  },
+  "income": {
+    "monthly_total": 4000,
+    "social_security": 2500,
+    "pension": 1500
+  },
+  "medical_data": {
+    "current_care_setting": "home",
+    "needs_nursing_home": true
+  }
+} {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"clientInfoKeys":["name","age","email","state","marital_status"],"hasAssets":true,"hasClientInfo":true,"hasIncome":true,"hasState":true,"level":"info","message":"📊 Extracted fields:","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: 📊 Extracted fields: {"clientInfoKeys":["name","age","email","state","marital_status"],"hasAssets":true,"hasClientInfo":true,"hasIncome":true,"hasState":true,"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Starting comprehensive planning for Complete Test User in FL","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Starting comprehensive planning for Complete Test User in FL {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Starting comprehensive Medicaid planning for FL","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Starting comprehensive Medicaid planning for FL {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Starting validation of all inputs","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Starting validation of all inputs {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"All inputs validated successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: All inputs validated successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Starting care planning for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Starting care planning for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Care planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Care planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Starting eligibility assessment for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Starting eligibility assessment for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Eligibility assessment completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Eligibility assessment completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Starting related benefits planning for undefined","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Starting related benefits planning for undefined {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Starting asset planning for client in florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Starting asset planning for client in florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Starting validation of all inputs","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Starting validation of all inputs {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"All inputs validated successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: All inputs validated successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Asset planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Asset planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Starting income planning for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Starting income planning for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"warn","message":"No spouse income provided for married client in florida; defaulting to 0","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[33mwarn[39m: No spouse income provided for married client in florida; defaulting to 0 {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Income planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Income planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Starting trust planning process for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Starting trust planning process for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Trust planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Trust planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Starting annuity planning for client in [object Object]","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Starting annuity planning for client in [object Object] {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Starting annuity planning for client in [object Object]","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Starting annuity planning for client in [object Object] {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Starting comprehensive divestment planning for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Starting comprehensive divestment planning for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Starting community spouse planning for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Starting community spouse planning for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Community spouse planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Community spouse planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Starting Medicaid application planning for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Starting Medicaid application planning for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Starting estate recovery planning process for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Starting estate recovery planning process for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+📊 New PostgreSQL connection established
+Executed query {
+  text: 'SELECT * FROM estate_recovery_rules WHERE state = $1',
+  duration: 7,
+  rows: 1
+}
+Executed query {
+  text: 'SELECT * FROM estate_recovery_rules WHERE state = $1',
+  duration: 1,
+  rows: 1
+}
+{"level":"info","message":"Estate recovery planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Estate recovery planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Asset strategies found: [{\"id\":\"asset-1\",\"type\":\"irrevocable-trust\",\"name\":\"Irrevocable Asset Protection Trust\",\"description\":\"Transfer excess assets to an irrevocable trust for long-term protection and legacy planning.\",\"pros\":[\"Protects assets for heirs\",\"Removes assets from estate\",\"Professional management available\",\"Can include special provisions\"],\"cons\":[\"5-year look-back period applies\",\"Loss of direct control\",\"Cannot be modified easily\",\"Setup and maintenance costs\"],\"effectiveness\":\"High\",\"timing\":\"Implement 5+ years before need\",\"estimatedCost\":\"$3,000-$10,000 setup plus annual fees\",\"monthlyImpact\":\"Eligibility after 5-year period\",\"specificActions\":[\"Choose experienced elder law attorney\",\"Select appropriate trustees\",\"Define distribution terms\",\"Include Medicaid protection language\",\"Consider retained life estate\"]},{\"id\":\"asset-2\",\"type\":\"medicaid-annuity\",\"name\":\"Spousal Medicaid-Compliant Annuity\",\"description\":\"Convert excess resources to income stream for community spouse protection.\",\"pros\":[\"Protects resources for at-home spouse\",\"Immediate Medicaid eligibility\",\"Guaranteed income for spouse\",\"No transfer penalty\"],\"cons\":[\"Irrevocable decision\",\"Must name state as beneficiary\",\"Income affects eligibility\",\"Limited flexibility\"],\"effectiveness\":\"High\",\"timing\":\"Immediately before application\",\"estimatedCost\":\"$0-$1,000 in fees\",\"monthlyImpact\":\"Converts $397,000 to income\"}]","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Asset strategies found: [{"id":"asset-1","type":"irrevocable-trust","name":"Irrevocable Asset Protection Trust","description":"Transfer excess assets to an irrevocable trust for long-term protection and legacy planning.","pros":["Protects assets for heirs","Removes assets from estate","Professional management available","Can include special provisions"],"cons":["5-year look-back period applies","Loss of direct control","Cannot be modified easily","Setup and maintenance costs"],"effectiveness":"High","timing":"Implement 5+ years before need","estimatedCost":"$3,000-$10,000 setup plus annual fees","monthlyImpact":"Eligibility after 5-year period","specificActions":["Choose experienced elder law attorney","Select appropriate trustees","Define distribution terms","Include Medicaid protection language","Consider retained life estate"]},{"id":"asset-2","type":"medicaid-annuity","name":"Spousal Medicaid-Compliant Annuity","description":"Convert excess resources to income stream for community spouse protection.","pros":["Protects resources for at-home spouse","Immediate Medicaid eligibility","Guaranteed income for spouse","No transfer penalty"],"cons":["Irrevocable decision","Must name state as beneficiary","Income affects eligibility","Limited flexibility"],"effectiveness":"High","timing":"Immediately before application","estimatedCost":"$0-$1,000 in fees","monthlyImpact":"Converts $397,000 to income"}] {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Trust strategies found: []","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Trust strategies found: [] {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Total strategies generated: 10","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Total strategies generated: 10 {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"Comprehensive Medicaid planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[32minfo[39m: Comprehensive Medicaid planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+Executed query {
+  text: 'SELECT * FROM clients WHERE email = $1',
+  duration: 1,
+  rows: 1
+}
+Executed query {
+  text: 'SELECT * FROM assessments WHERE client_id = $1 ORDER BY created_at DESC',
+  duration: 14,
+  rows: 0
+}
+{"level":"error","message":"Database error while saving planning results: null value in column \"case_id\" of relation \"plans\" violates not-null constraint","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+[31merror[39m: Database error while saving planning results: null value in column "case_id" of relation "plans" violates not-null constraint {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:14"}
+{"level":"info","message":"POST /api/planning/comprehensive","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: POST /api/planning/comprehensive {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"📥 Planning controller received request","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: 📥 Planning controller received request {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"0":"state","1":"client_info","2":"assets","3":"income","4":"medical_data","level":"info","message":"📥 Request body keys:","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: 📥 Request body keys: {"0":"state","1":"client_info","2":"assets","3":"income","4":"medical_data","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"📥 Full request body: {\n  \"state\": \"FL\",\n  \"client_info\": {\n    \"name\": \"Complete Test User\",\n    \"age\": 72,\n    \"email\": \"complete.test@example.com\",\n    \"state\": \"FL\",\n    \"marital_status\": \"married\"\n  },\n  \"assets\": {\n    \"total_value\": 200000,\n    \"home\": 300000,\n    \"cash\": 100000,\n    \"retirement_accounts\": 100000\n  },\n  \"income\": {\n    \"monthly_total\": 4000,\n    \"social_security\": 2500,\n    \"pension\": 1500\n  },\n  \"medical_data\": {\n    \"current_care_setting\": \"home\",\n    \"needs_nursing_home\": true\n  }\n}","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: 📥 Full request body: {
+  "state": "FL",
+  "client_info": {
+    "name": "Complete Test User",
+    "age": 72,
+    "email": "complete.test@example.com",
+    "state": "FL",
+    "marital_status": "married"
+  },
+  "assets": {
+    "total_value": 200000,
+    "home": 300000,
+    "cash": 100000,
+    "retirement_accounts": 100000
+  },
+  "income": {
+    "monthly_total": 4000,
+    "social_security": 2500,
+    "pension": 1500
+  },
+  "medical_data": {
+    "current_care_setting": "home",
+    "needs_nursing_home": true
+  }
+} {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"clientInfoKeys":["name","age","email","state","marital_status"],"hasAssets":true,"hasClientInfo":true,"hasIncome":true,"hasState":true,"level":"info","message":"📊 Extracted fields:","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: 📊 Extracted fields: {"clientInfoKeys":["name","age","email","state","marital_status"],"hasAssets":true,"hasClientInfo":true,"hasIncome":true,"hasState":true,"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Starting comprehensive planning for Complete Test User in FL","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Starting comprehensive planning for Complete Test User in FL {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Starting comprehensive Medicaid planning for FL","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Starting comprehensive Medicaid planning for FL {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Starting validation of all inputs","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Starting validation of all inputs {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"All inputs validated successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: All inputs validated successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Starting care planning for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Starting care planning for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Care planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Care planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Starting eligibility assessment for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Starting eligibility assessment for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Eligibility assessment completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Eligibility assessment completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Starting related benefits planning for undefined","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Starting related benefits planning for undefined {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Starting asset planning for client in florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Starting asset planning for client in florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Starting validation of all inputs","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Starting validation of all inputs {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"All inputs validated successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: All inputs validated successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Asset planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Asset planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Starting income planning for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Starting income planning for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"warn","message":"No spouse income provided for married client in florida; defaulting to 0","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[33mwarn[39m: No spouse income provided for married client in florida; defaulting to 0 {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Income planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Income planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Starting trust planning process for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Starting trust planning process for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Trust planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Trust planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Starting annuity planning for client in [object Object]","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Starting annuity planning for client in [object Object] {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Starting annuity planning for client in [object Object]","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Starting annuity planning for client in [object Object] {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Starting comprehensive divestment planning for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Starting comprehensive divestment planning for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Starting community spouse planning for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Starting community spouse planning for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Community spouse planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Community spouse planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Starting Medicaid application planning for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Starting Medicaid application planning for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Starting estate recovery planning process for florida","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Starting estate recovery planning process for florida {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+📊 New PostgreSQL connection established
+Executed query {
+  text: 'SELECT * FROM estate_recovery_rules WHERE state = $1',
+  duration: 7,
+  rows: 1
+}
+Executed query {
+  text: 'SELECT * FROM estate_recovery_rules WHERE state = $1',
+  duration: 0,
+  rows: 1
+}
+{"level":"info","message":"Estate recovery planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Estate recovery planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Asset strategies found: [{\"id\":\"asset-1\",\"type\":\"irrevocable-trust\",\"name\":\"Irrevocable Asset Protection Trust\",\"description\":\"Transfer excess assets to an irrevocable trust for long-term protection and legacy planning.\",\"pros\":[\"Protects assets for heirs\",\"Removes assets from estate\",\"Professional management available\",\"Can include special provisions\"],\"cons\":[\"5-year look-back period applies\",\"Loss of direct control\",\"Cannot be modified easily\",\"Setup and maintenance costs\"],\"effectiveness\":\"High\",\"timing\":\"Implement 5+ years before need\",\"estimatedCost\":\"$3,000-$10,000 setup plus annual fees\",\"monthlyImpact\":\"Eligibility after 5-year period\",\"specificActions\":[\"Choose experienced elder law attorney\",\"Select appropriate trustees\",\"Define distribution terms\",\"Include Medicaid protection language\",\"Consider retained life estate\"]},{\"id\":\"asset-2\",\"type\":\"medicaid-annuity\",\"name\":\"Spousal Medicaid-Compliant Annuity\",\"description\":\"Convert excess resources to income stream for community spouse protection.\",\"pros\":[\"Protects resources for at-home spouse\",\"Immediate Medicaid eligibility\",\"Guaranteed income for spouse\",\"No transfer penalty\"],\"cons\":[\"Irrevocable decision\",\"Must name state as beneficiary\",\"Income affects eligibility\",\"Limited flexibility\"],\"effectiveness\":\"High\",\"timing\":\"Immediately before application\",\"estimatedCost\":\"$0-$1,000 in fees\",\"monthlyImpact\":\"Converts $397,000 to income\"}]","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Asset strategies found: [{"id":"asset-1","type":"irrevocable-trust","name":"Irrevocable Asset Protection Trust","description":"Transfer excess assets to an irrevocable trust for long-term protection and legacy planning.","pros":["Protects assets for heirs","Removes assets from estate","Professional management available","Can include special provisions"],"cons":["5-year look-back period applies","Loss of direct control","Cannot be modified easily","Setup and maintenance costs"],"effectiveness":"High","timing":"Implement 5+ years before need","estimatedCost":"$3,000-$10,000 setup plus annual fees","monthlyImpact":"Eligibility after 5-year period","specificActions":["Choose experienced elder law attorney","Select appropriate trustees","Define distribution terms","Include Medicaid protection language","Consider retained life estate"]},{"id":"asset-2","type":"medicaid-annuity","name":"Spousal Medicaid-Compliant Annuity","description":"Convert excess resources to income stream for community spouse protection.","pros":["Protects resources for at-home spouse","Immediate Medicaid eligibility","Guaranteed income for spouse","No transfer penalty"],"cons":["Irrevocable decision","Must name state as beneficiary","Income affects eligibility","Limited flexibility"],"effectiveness":"High","timing":"Immediately before application","estimatedCost":"$0-$1,000 in fees","monthlyImpact":"Converts $397,000 to income"}] {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Trust strategies found: []","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Trust strategies found: [] {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Total strategies generated: 10","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Total strategies generated: 10 {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+{"level":"info","message":"Comprehensive Medicaid planning completed successfully","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[32minfo[39m: Comprehensive Medicaid planning completed successfully {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+Executed query {
+  text: 'SELECT * FROM clients WHERE email = $1',
+  duration: 1,
+  rows: 1
+}
+Executed query {
+  text: 'SELECT * FROM assessments WHERE client_id = $1 ORDER BY created_at DESC',
+  duration: 1,
+  rows: 0
+}
+{"level":"error","message":"Database error while saving planning results: null value in column \"case_id\" of relation \"plans\" violates not-null constraint","service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+[31merror[39m: Database error while saving planning results: null value in column "case_id" of relation "plans" violates not-null constraint {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:33:22"}
+📡 SIGTERM received. Shutting down gracefully.
+{"level":"info","message":"SIGTERM received. Shutting down gracefully.","service":"medicaid-planning-api","timestamp":"2025-05-29 22:46:57"}
+[32minfo[39m: SIGTERM received. Shutting down gracefully. {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:46:57"}
+{"level":"info","message":"Server closed.","service":"medicaid-planning-api","timestamp":"2025-05-29 22:46:57"}
+[32minfo[39m: Server closed. {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:46:57"}
+🛑 Process exit event fired with code: 0
+{"level":"info","message":"Process exiting with code: 0","service":"medicaid-planning-api","timestamp":"2025-05-29 22:46:57"}
+[32minfo[39m: Process exiting with code: 0 {"service":"medicaid-planning-api","timestamp":"2025-05-29 22:46:57"}

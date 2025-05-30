@@ -1,33 +1,93 @@
 // src/app.js
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const logger = require('./config/logger');
 const config = require('./config/config');
 const { requestTransformer, responseTransformer } = require('./middleware/dataTransformer');
+const { sanitizeInputs } = require('./middleware/inputSanitization');
 
 // Initialize express app
 const app = express();
 
-// Set CORS headers to allow all origins for development
-app.use((req, res, next) => {
-  // Allow all origins for development
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  
-  // Handle preflight OPTIONS requests
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(204);
-  }
-  
-  next();
+// Security middleware - CRITICAL: Add before all other middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false
+}));
+
+// Rate limiting - CRITICAL: Prevent API abuse
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: {
+    error: 'Too many requests',
+    message: 'Rate limit exceeded. Please try again later.',
+    retryAfter: 15 * 60 // 15 minutes in seconds
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Skip rate limiting for health checks
+  skip: (req) => req.path === '/api/health' || req.path === '/'
 });
 
+// Stricter rate limiting for planning endpoints
+const planningLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 20, // Limit planning requests to 20 per hour
+  message: {
+    error: 'Planning rate limit exceeded',
+    message: 'Too many planning requests. Please try again in 1 hour.',
+    retryAfter: 60 * 60
+  }
+});
+
+app.use('/api/', apiLimiter);
+app.use('/api/planning', planningLimiter);
+
+// SECURE CORS Configuration - CRITICAL FIX
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = config.corsOrigin;
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      logger.warn(`CORS blocked request from unauthorized origin: ${origin}`);
+      callback(new Error('Not allowed by CORS policy'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+  maxAge: 86400 // 24 hours
+};
+
+app.use(cors(corsOptions));
+
 // Continue with other middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' })); // Set reasonable payload limit
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// SECURITY: Input sanitization - MUST come after JSON parsing
+app.use(sanitizeInputs);
+
 app.use(requestTransformer);
 app.use(responseTransformer);
 
@@ -60,6 +120,7 @@ app.get('/', (req, res) => {
 app.use('/api/eligibility', require('./routes/eligibilityRoutes'));
 app.use('/api/planning', require('./routes/planningRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
+app.use('/api/webhooks', require('./routes/webhookRoutes'));
 
 // 404 handler
 app.use((req, res) => {
@@ -71,17 +132,22 @@ app.use((req, res) => {
   });
 });
 
-// Error handling middleware
+// SECURE Error handling middleware
+// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  logger.error(`Error: ${err.message}`);
-  logger.error(err.stack);
+  // SECURITY: Use secure logger to prevent sensitive data exposure
+  const SecureLogger = require('./utils/secureLogger').SecureLogger;
+  SecureLogger.error(`API Error: ${err.message}`, err);
   
-  // Send appropriate response based on environment
+  // SECURITY: Never expose stack traces or internal details in production
+  const isProduction = config.env === 'production';
+  
   res.status(err.status || 500).json({
-    error: err.name || 'Internal Server Error',
-    message: config.env === 'development' ? err.message : 'Something went wrong',
+    error: isProduction ? 'Internal Server Error' : (err.name || 'Internal Server Error'),
+    message: isProduction ? 'Something went wrong' : err.message,
     status: 'error',
-    details: config.env === 'development' ? err.details : undefined
+    // SECURITY: Never expose error details in production
+    ...(isProduction ? {} : { details: err.details })
   });
 });
 

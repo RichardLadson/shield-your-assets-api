@@ -44,6 +44,7 @@ class Client extends BaseModel {
       email,
       phone,
       date_of_birth,
+      age,
       marital_status,
       gohighlevel_contact_id
     } = clientData;
@@ -51,15 +52,15 @@ class Client extends BaseModel {
     const query = `
       INSERT INTO clients (
         assigned_planner_id, first_name, last_name, email, phone, 
-        date_of_birth, marital_status, gohighlevel_contact_id
+        date_of_birth, age, marital_status, gohighlevel_contact_id
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `;
     
     const result = await super.query(query, [
       assigned_planner_id, first_name, last_name, email, phone, 
-      date_of_birth, marital_status, gohighlevel_contact_id
+      date_of_birth, age, marital_status, gohighlevel_contact_id
     ]);
     
     return result.rows[0];
@@ -282,8 +283,24 @@ class BenefitRules extends BaseModel {
 
 class EstateRecoveryRules extends BaseModel {
   static async findByState(state) {
+    // Convert state name to code if needed
+    let stateCode = state.toUpperCase();
+    
+    // If it's a full state name, convert to code
+    const stateMap = {
+      'FLORIDA': 'FL',
+      'NEW YORK': 'NY',
+      'CALIFORNIA': 'CA',
+      'TEXAS': 'TX'
+      // Add more as needed
+    };
+    
+    if (stateCode.length > 2) {
+      stateCode = stateMap[stateCode] || stateCode.substring(0, 2).toUpperCase();
+    }
+    
     const query = 'SELECT * FROM estate_recovery_rules WHERE state = $1';
-    const result = await super.query(query, [state.toUpperCase()]);
+    const result = await super.query(query, [stateCode]);
     return result.rows[0];
   }
 

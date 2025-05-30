@@ -1,8 +1,14 @@
-const fs = require('fs');
+const pool = require('../../../config/database');
 const logger = require('../../config/logger');
 
 /**
- * Loads Medicaid rules for a specific state (async for test compatibility)
+ * Cache for loaded rules to avoid repeated database queries
+ */
+const rulesCache = new Map();
+const CACHE_TTL = 3600000; // 1 hour in milliseconds
+
+/**
+ * Loads Medicaid rules for a specific state from database
  * 
  * @param {string} state - State abbreviation or name
  * @returns {Promise<Object>} State-specific Medicaid rules
@@ -12,15 +18,103 @@ async function loadMedicaidRules(state) {
     throw new Error('State must be provided to load Medicaid rules');
   }
   
-  // Use the sync version internally
-  const rules = getMedicaidRules(state);
+  const rules = await getMedicaidRulesFromDb(state);
   const stateKey = normalizeStateKey(state);
   
   return { [stateKey]: rules };
 }
 
 /**
- * Gets Medicaid rules for a specific state (sync version)
+ * Gets Medicaid rules from database with caching
+ * 
+ * @param {string} state - State abbreviation or name
+ * @returns {Promise<Object>} State-specific Medicaid rules
+ */
+async function getMedicaidRulesFromDb(state) {
+  const stateCode = getStateCode(state);
+  const cacheKey = `medicaid_${stateCode}`;
+  
+  // Check cache first
+  const cached = rulesCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    logger.debug(`Using cached Medicaid rules for state: ${stateCode}`);
+    return cached.data;
+  }
+  
+  try {
+    logger.debug(`Loading Medicaid rules from database for state: ${stateCode}`);
+    
+    const query = `
+      SELECT 
+        state_code,
+        individual_resource_limit,
+        community_spouse_resource_allowance_min,
+        community_spouse_resource_allowance_max,
+        individual_income_limit,
+        community_spouse_income_allowance,
+        lookback_period_months,
+        penalty_divisor,
+        state_specific_rules
+      FROM medicaid_rules
+      WHERE state_code = $1
+      ORDER BY effective_date DESC
+      LIMIT 1
+    `;
+    
+    const result = await pool.query(query, [stateCode]);
+    
+    if (result.rows.length === 0) {
+      logger.warn(`No Medicaid rules found in database for state: ${stateCode}, using defaults`);
+      return getDefaultRules(state);
+    }
+    
+    const dbRules = result.rows[0];
+    const stateKey = normalizeStateKey(state);
+    const formattedStateName = stateKey.split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    
+    const rules = {
+      programName: `${formattedStateName} Medicaid`,
+      resourceLimitSingle: Number(dbRules.individual_resource_limit),
+      resourceLimitMarried: Number(dbRules.community_spouse_resource_allowance_max) || 3000,
+      incomeLimitSingle: Number(dbRules.individual_income_limit),
+      incomeLimitMarried: Number(dbRules.community_spouse_income_allowance) || 1470,
+      nursingHomeIncomeLimitSingle: 2901, // Standard for most states
+      nursingHomeIncomeLimitMarried: 5802,
+      homeEquityLimit: 730000, // Standard federal limit
+      averageNursingHomeCost: 8397,
+      lookbackPeriodMonths: dbRules.lookback_period_months || 60,
+      penaltyDivisor: Number(dbRules.penalty_divisor) || 9500,
+      ...(dbRules.state_specific_rules || {})
+    };
+    
+    // Add income disregards for Florida
+    if (stateCode === 'FL') {
+      rules.disregards = {
+        income: {
+          earned: 0.5,
+          unearned: 20
+        }
+      };
+    }
+    
+    // Cache the results
+    rulesCache.set(cacheKey, {
+      data: rules,
+      timestamp: Date.now()
+    });
+    
+    return rules;
+  } catch (error) {
+    logger.error('Error loading Medicaid rules from database:', error);
+    return getDefaultRules(state);
+  }
+}
+
+/**
+ * Gets Medicaid rules for a specific state (sync version for backward compatibility)
+ * Falls back to async version internally
  * 
  * @param {string} state - State abbreviation or name
  * @param {Object} [updates] - Optional updates to apply
@@ -33,52 +127,123 @@ function getMedicaidRules(state, updates) {
     throw new Error('State must be provided to get Medicaid rules');
   }
 
+  // For sync compatibility, return default rules
+  // The async version should be used when possible
+  const rules = getDefaultRules(state);
+  
+  return updates ? loadRuleUpdates({ [normalizeStateKey(state)]: rules }, { [normalizeStateKey(state)]: updates[normalizeStateKey(state)] })[normalizeStateKey(state)] : rules;
+}
+
+/**
+ * Gets default rules for backward compatibility
+ * 
+ * @param {string} state - State abbreviation or name
+ * @returns {Object} Default rules
+ */
+function getDefaultRules(state) {
   const stateKey = normalizeStateKey(state);
-  
-  // Create mock rules for backwards compatibility
-  const mockRules = {
-    florida: {
-      resourceLimitSingle: 2000,
-      resourceLimitMarried: 3000,
-      incomeLimitSingle: 987,
-      incomeLimitMarried: 1470,
-      nursingHomeIncomeLimitSingle: 2901,
-      nursingHomeIncomeLimitMarried: 5802,
-      homeEquityLimit: 730000,
-      averageNursingHomeCost: 8397
-    }
-  };
-  
-  if (!mockRules[stateKey]) {
-    // Provide default rules for any state
-    mockRules[stateKey] = mockRules.florida;
-  }
-  
-  // Format the state name properly for program name
   const formattedStateName = stateKey.split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
   
-  // Start with base rules
-  const baseRules = {
-    ...mockRules[stateKey],
-    programName: `${formattedStateName} Medicaid`
+  const defaultRules = {
+    programName: `${formattedStateName} Medicaid`,
+    resourceLimitSingle: 2000,
+    resourceLimitMarried: 3000,
+    incomeLimitSingle: 2901,
+    incomeLimitMarried: 1470,
+    nursingHomeIncomeLimitSingle: 2901,
+    nursingHomeIncomeLimitMarried: 5802,
+    homeEquityLimit: 730000,
+    averageNursingHomeCost: 8397,
+    lookbackPeriodMonths: 60,
+    penaltyDivisor: 9500
   };
   
-  // Only add default income disregards if the state actually has defined disregards in the JSON
-  // This makes our implementation data-driven instead of hard-coding defaults for every state
+  // Add income disregards for Florida
   if (stateKey === 'florida') {
-    baseRules.disregards = {
+    defaultRules.disregards = {
       income: {
         earned: 0.5,
-        unearned: 20,
-        ...((mockRules[stateKey].disregards && mockRules[stateKey].disregards.income) || {})
-      },
-      ...(mockRules[stateKey].disregards || {})
+        unearned: 20
+      }
     };
   }
+  
+  return defaultRules;
+}
 
-  return updates ? loadRuleUpdates({ [stateKey]: baseRules }, { [stateKey]: updates[stateKey] })[stateKey] : baseRules;
+/**
+ * Gets state code from state name or abbreviation
+ * 
+ * @param {string} state - State input
+ * @returns {string} Two-letter state code
+ */
+function getStateCode(state) {
+  if (!state) return '';
+  
+  const input = state.toUpperCase().trim();
+  
+  // If already a 2-letter code, return it
+  if (input.length === 2) {
+    return input;
+  }
+  
+  // Map of state names to codes
+  const stateMap = {
+    'FLORIDA': 'FL',
+    'NEW YORK': 'NY',
+    'CALIFORNIA': 'CA',
+    'TEXAS': 'TX',
+    'ALABAMA': 'AL',
+    'ALASKA': 'AK',
+    'ARIZONA': 'AZ',
+    'ARKANSAS': 'AR',
+    'COLORADO': 'CO',
+    'CONNECTICUT': 'CT',
+    'DELAWARE': 'DE',
+    'GEORGIA': 'GA',
+    'HAWAII': 'HI',
+    'IDAHO': 'ID',
+    'ILLINOIS': 'IL',
+    'INDIANA': 'IN',
+    'IOWA': 'IA',
+    'KANSAS': 'KS',
+    'KENTUCKY': 'KY',
+    'LOUISIANA': 'LA',
+    'MAINE': 'ME',
+    'MARYLAND': 'MD',
+    'MASSACHUSETTS': 'MA',
+    'MICHIGAN': 'MI',
+    'MINNESOTA': 'MN',
+    'MISSISSIPPI': 'MS',
+    'MISSOURI': 'MO',
+    'MONTANA': 'MT',
+    'NEBRASKA': 'NE',
+    'NEVADA': 'NV',
+    'NEW HAMPSHIRE': 'NH',
+    'NEW JERSEY': 'NJ',
+    'NEW MEXICO': 'NM',
+    'NORTH CAROLINA': 'NC',
+    'NORTH DAKOTA': 'ND',
+    'OHIO': 'OH',
+    'OKLAHOMA': 'OK',
+    'OREGON': 'OR',
+    'PENNSYLVANIA': 'PA',
+    'RHODE ISLAND': 'RI',
+    'SOUTH CAROLINA': 'SC',
+    'SOUTH DAKOTA': 'SD',
+    'TENNESSEE': 'TN',
+    'UTAH': 'UT',
+    'VERMONT': 'VT',
+    'VIRGINIA': 'VA',
+    'WASHINGTON': 'WA',
+    'WEST VIRGINIA': 'WV',
+    'WISCONSIN': 'WI',
+    'WYOMING': 'WY'
+  };
+  
+  return stateMap[input.replace(/_/g, ' ')] || 'FL'; // Default to FL
 }
 
 /**
@@ -266,10 +431,12 @@ function normalizeStateKey(state) {
 module.exports = {
   loadMedicaidRules,
   getMedicaidRules,
+  getMedicaidRulesFromDb,
   getStateSpecificLimits,
   loadRuleUpdates,
   getHomeEquityLimit,
   getIncomeTrustRequirements,
   getDisregardRules,
-  normalizeStateKey
+  normalizeStateKey,
+  getStateCode
 };

@@ -6,6 +6,7 @@ const communitySpousePlanning = require('../services/planning/communitySpousePla
 const postEligibilityPlanning = require('../services/planning/postEligibilityPlanning');
 const eligibilityAssessment = require('../services/planning/eligibilityAssessment');
 const reportGenerator = require('../services/reporting/reportGenerator');
+const integrationController = require('../controllers/integrationController');
 
 // POST route for comprehensive planning
 router.post('/comprehensive', planningController.comprehensivePlanning);
@@ -133,6 +134,101 @@ router.post('/report', async (req, res) => {
     return res.status(500).json({
       error: `Server error: ${error.message}`,
       status: 'error'
+    });
+  }
+});
+
+// GET route for testing GHL integration
+router.get('/test-ghl-integration', async (_req, res) => {
+  try {
+    // Create test client data
+    const testClientData = {
+      id: 'test-' + Date.now(),
+      firstName: 'Test',
+      lastName: 'Client',
+      email: 'test-' + Date.now() + '@example.com',
+      phone: '555-123-4567',
+      state: 'FL',
+      maritalStatus: 'single',
+      eligibilityStatus: 'pending'
+    };
+
+    const testReportData = {
+      reportId: 'report-test-' + Date.now(),
+      clientName: 'Test Client',
+      assessmentDate: new Date().toISOString(),
+      eligibilityStatus: 'eligible',
+      totalAssets: 50000,
+      estimatedSavings: 25000,
+      strategies: ['Asset Protection Trust', 'Spend Down', 'Annuity Purchase'],
+      keyRecommendations: 'Test recommendations for GHL integration',
+      priorityLevel: 'high'
+    };
+
+    const testReportInfo = {
+      reportId: testReportData.reportId,
+      generatedDate: new Date().toISOString(),
+      eligibilityStatus: 'eligible',
+      reportUrl: 'https://example.com/reports/' + testReportData.reportId,
+      keyFindings: 'Test key findings for integration',
+      nextAction: 'Schedule consultation'
+    };
+
+    const testAssessmentData = {
+      clientData: testClientData,
+      reportData: testReportData,
+      reportInfo: testReportInfo
+    };
+
+    // Log the test data
+    console.log('Testing GHL integration with data:', JSON.stringify(testAssessmentData, null, 2));
+
+    // Check if GHL is configured
+    const isConfigured = !!(process.env.GHL_API_KEY && process.env.GHL_LOCATION_ID);
+    
+    let integrationResults = null;
+    let error = null;
+
+    if (isConfigured) {
+      try {
+        // Attempt to sync with GHL
+        integrationResults = await integrationController.handleAssessmentComplete(testAssessmentData);
+      } catch (err) {
+        error = {
+          message: err.message,
+          stack: err.stack,
+          response: err.response?.data
+        };
+      }
+    }
+
+    // Return detailed results
+    return res.json({
+      status: 'test_complete',
+      timestamp: new Date().toISOString(),
+      configuration: {
+        isConfigured,
+        hasApiKey: !!process.env.GHL_API_KEY,
+        hasLocationId: !!process.env.GHL_LOCATION_ID,
+        baseUrl: process.env.GHL_BASE_URL || 'https://api.gohighlevel.com/v1',
+        hasPipelineId: !!process.env.GHL_PIPELINE_ID,
+        hasStageId: !!process.env.GHL_STAGE_ID,
+        hasWebhookUrl: !!process.env.GHL_WEBHOOK_URL
+      },
+      testData: testAssessmentData,
+      integrationResults,
+      error,
+      message: isConfigured 
+        ? (error ? 'GHL integration test failed' : 'GHL integration test completed')
+        : 'GHL integration not configured - set GHL_API_KEY and GHL_LOCATION_ID environment variables'
+    });
+  } catch (error) {
+    console.error('Test GHL Integration Error:', error);
+    return res.status(500).json({
+      status: 'error',
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
     });
   }
 });
