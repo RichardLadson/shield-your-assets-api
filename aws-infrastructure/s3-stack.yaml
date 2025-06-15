@@ -1,0 +1,175 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'S3 Storage Stack for Shield Your Assets API'
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that is prefixed to resource names
+    Type: String
+    Default: shield-assets-prod
+
+Resources:
+  DocumentsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${EnvironmentName}-documents-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            BucketKeyEnabled: true
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - DELETE
+              - HEAD
+            AllowedOrigins:
+              - '*'
+            ExposedHeaders:
+              - ETag
+            MaxAge: 3000
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-documents
+
+  ReportsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${EnvironmentName}-reports-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            BucketKeyEnabled: true
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-reports
+
+  # S3 Access Policy for ECS Tasks
+  S3AccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${EnvironmentName}-s3-access-policy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:DeleteObject
+              - s3:GetObjectVersion
+              - s3:PutObjectAcl
+            Resource:
+              - !Sub '${DocumentsBucket.Arn}/*'
+              - !Sub '${ReportsBucket.Arn}/*'
+          - Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:GetBucketLocation
+            Resource:
+              - !GetAtt DocumentsBucket.Arn
+              - !GetAtt ReportsBucket.Arn
+      Roles:
+        - !Ref ECSTaskRole
+
+  # IAM Role for ECS Tasks to access S3
+  ECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${EnvironmentName}-ecs-task-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-ecs-task-role
+
+  # Secrets for S3 configuration
+  S3ConfigSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub ${EnvironmentName}/s3/config
+      Description: S3 configuration for Shield Assets API
+      SecretString: !Sub |
+        {
+          "documents_bucket": "${DocumentsBucket}",
+          "reports_bucket": "${ReportsBucket}",
+          "region": "${AWS::Region}"
+        }
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-s3-config
+
+Outputs:
+  DocumentsBucketName:
+    Description: Name of the documents S3 bucket
+    Value: !Ref DocumentsBucket
+    Export:
+      Name: !Sub ${EnvironmentName}-DOCUMENTS-BUCKET
+
+  ReportsBucketName:
+    Description: Name of the reports S3 bucket
+    Value: !Ref ReportsBucket
+    Export:
+      Name: !Sub ${EnvironmentName}-REPORTS-BUCKET
+
+  DocumentsBucketArn:
+    Description: ARN of the documents S3 bucket
+    Value: !GetAtt DocumentsBucket.Arn
+    Export:
+      Name: !Sub ${EnvironmentName}-DOCUMENTS-BUCKET-ARN
+
+  ReportsBucketArn:
+    Description: ARN of the reports S3 bucket
+    Value: !GetAtt ReportsBucket.Arn
+    Export:
+      Name: !Sub ${EnvironmentName}-REPORTS-BUCKET-ARN
+
+  ECSTaskRoleArn:
+    Description: ARN of the ECS task role
+    Value: !GetAtt ECSTaskRole.Arn
+    Export:
+      Name: !Sub ${EnvironmentName}-ECS-TASK-ROLE-ARN
+
+  S3ConfigSecretArn:
+    Description: ARN of the S3 config secret
+    Value: !Ref S3ConfigSecret
+    Export:
+      Name: !Sub ${EnvironmentName}-S3-CONFIG-SECRET-ARN

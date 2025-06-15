@@ -59,20 +59,9 @@ const planningLimiter = rateLimit({
 app.use('/api/', apiLimiter);
 app.use('/api/planning', planningLimiter);
 
-// SECURE CORS Configuration - CRITICAL FIX
+// TEMPORARY CORS Configuration - Allow frontend domain
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = config.corsOrigin;
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      logger.warn(`CORS blocked request from unauthorized origin: ${origin}`);
-      callback(new Error('Not allowed by CORS policy'));
-    }
-  },
+  origin: ['https://d3btqqunljs3nt.cloudfront.net', 'https://eligibilityApp.nationalmedicaidplanning.com', 'http://localhost:8080'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
@@ -98,6 +87,14 @@ app.use((req, res, next) => {
 });
 
 // Create simple health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    environment: config.env
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',

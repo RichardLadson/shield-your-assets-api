@@ -1,8 +1,17 @@
 // src/server.js
-require('dotenv').config();
+// Only load dotenv in development
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    require('dotenv').config();
+  } catch (err) {
+    // dotenv is not available - likely in production mode without dev dependencies
+    console.log('dotenv not available - using environment variables directly');
+  }
+}
 const app = require('./app');
 const logger = require('./config/logger');
 const config = require('./config/config');
+const { initializeDatabase } = require('./utils/databaseInit');
 
 // Environment variable validation
 function validateEnvironment() {
@@ -92,54 +101,63 @@ process.on('exit', (code) => {
 // Keep track of server state
 let serverStarted = false;
 
-// Start server
-try {
-  const server = app.listen(config.port, () => {
-    serverStarted = true;
-    console.log(`✅ Server successfully started on port ${config.port}`);
-    logger.info(`Server running on port ${config.port}`);
-    logger.info(`Environment: ${config.env}`);
-    logger.info(`Server started at: ${new Date().toISOString()}`);
+// Initialize database before starting server
+async function startServer() {
+  try {
+    // Initialize database tables if needed
+    await initializeDatabase();
     
-    // Keep the process alive
-    if (process.env.NODE_ENV !== 'test') {
-      console.log('🏃 Server is running and listening for requests...');
-    }
-  });
-
-  // Handle server errors
-  server.on('error', (error) => {
-    console.error('💥 Server error:', error);
-    logger.error('Server error:', error);
-    if (error.code === 'EADDRINUSE') {
-      console.error(`Port ${config.port} is already in use`);
-      process.exit(1);
-    }
-  });
-
-  // Graceful shutdown on SIGTERM or SIGINT
-  ['SIGTERM', 'SIGINT'].forEach(signal => {
-    process.on(signal, () => {
-      console.log(`📡 ${signal} received. Shutting down gracefully.`);
-      logger.info(`${signal} received. Shutting down gracefully.`);
-      server.close(() => {
-        logger.info('Server closed.');
-        process.exit(0);
-      });
+    // Start server
+    const server = app.listen(config.port, () => {
+      serverStarted = true;
+      console.log(`✅ Server successfully started on port ${config.port}`);
+      logger.info(`Server running on port ${config.port}`);
+      logger.info(`Environment: ${config.env}`);
+      logger.info(`Server started at: ${new Date().toISOString()}`);
       
-      // Force shutdown after 10 seconds if graceful shutdown fails
-      setTimeout(() => {
-        logger.error('Could not close connections in time, forcefully shutting down');
-        process.exit(1);
-      }, 10000);
+      // Keep the process alive
+      if (process.env.NODE_ENV !== 'test') {
+        console.log('🏃 Server is running and listening for requests...');
+      }
     });
-  });
-  
-} catch (error) {
-  console.error('💥 Failed to start server:', error);
-  logger.error('Failed to start server:', error);
-  process.exit(1);
+
+    // Handle server errors
+    server.on('error', (error) => {
+      console.error('💥 Server error:', error);
+      logger.error('Server error:', error);
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${config.port} is already in use`);
+        process.exit(1);
+      }
+    });
+
+    // Graceful shutdown on SIGTERM or SIGINT
+    ['SIGTERM', 'SIGINT'].forEach(signal => {
+      process.on(signal, () => {
+        console.log(`📡 ${signal} received. Shutting down gracefully.`);
+        logger.info(`${signal} received. Shutting down gracefully.`);
+        server.close(() => {
+          logger.info('Server closed.');
+          process.exit(0);
+        });
+        
+        // Force shutdown after 10 seconds if graceful shutdown fails
+        setTimeout(() => {
+          logger.error('Could not close connections in time, forcefully shutting down');
+          process.exit(1);
+        }, 10000);
+      });
+    });
+    
+  } catch (error) {
+    console.error('💥 Failed to start server:', error);
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
 }
+
+// Start server with database initialization
+startServer();
 
 // Keep process alive - prevent immediate exit
 if (process.env.NODE_ENV !== 'test') {

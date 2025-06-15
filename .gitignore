@@ -5,13 +5,79 @@ node_modules/
 logs/
 reports/
 coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Environment variables
+# Environment variables - CRITICAL SECURITY
 .env
 .env.*
 !.env.example
+!.env.template
+*.env
+
+# NEVER COMMIT - Contains database passwords and JWT secrets
+.env.superuser
+.env.production
+.env.development
+.env.local
+
+# Security-sensitive files
+*.key
+*.pem
+*.p12
+*.pfx
+secrets*
+credentials*
+aws-credentials*
+*secret*
+*password*
+*token*
+
+# AWS and deployment files with sensitive info
+aws-infrastructure/secrets-stack.yaml
+aws-infrastructure/cloudformation-outputs.json
+deploy*.sh
+*deploy*.sh
+build-and-deploy.sh
+Dockerfile.prod
+
+# Database files and dumps
+*.sql
+*.dump
+*.backup
+data/
+database/
+
+# Build artifacts
+dist/
+build/
+tmp/
+temp/
+
+# IDE and editor files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
 
 # macOS system files
 .DS_Store
-# Superuser credentials - keep secure
-.env.superuser
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+# Runtime files
+*.pid
+*.seed
+*.pid.lock
+
+# Documentation with sensitive info
+*MIGRATION*.md
+*DEPLOYMENT*.md
+*AWS*.md

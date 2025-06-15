@@ -2,6 +2,7 @@
 const logger = require('../../config/logger');
 const medicaidRulesLoader = require('../utils/medicaidRulesLoader');
 const { getMedicaidRules } = require('../utils/medicaidRulesLoader');
+const { classifyAssets } = require('../utils/eligibilityUtils');
 
 /**
  * Helper function to safely extract state string
@@ -199,15 +200,12 @@ async function assessMedicaidEligibility(clientInfo, assets, income, medicalNeed
       countableAssets = assets.countable || 0;
       nonCountableAssets = assets.non_countable || 0;
     } else {
-      // Otherwise, calculate from specific asset types
-      const savings = assets.savings || 0;
-      const investments = assets.investments || 0;
-      const home = assets.home || 0;
-      const vehicle = assets.vehicle || 0;
+      // Use the classifyAssets utility function for proper classification
+      const assetClassification = classifyAssets(assets);
+      countableAssets = assetClassification.countableAssets;
+      nonCountableAssets = assetClassification.nonCountableAssets;
       
-      // Calculate countable and non-countable assets
-      countableAssets = savings + investments;
-      nonCountableAssets = home + vehicle;
+      logger.info(`Asset classification - Countable: $${countableAssets}, Non-countable: $${nonCountableAssets}`);
     }
     
     // Extract income details - standardize property names
@@ -262,7 +260,30 @@ async function assessMedicaidEligibility(clientInfo, assets, income, medicalNeed
       urgency = "Medium - Income exceeds limits, income planning required";
     }
     
-    // Return comprehensive assessment
+    // Create assessment object for strategy generation
+    const assessment = {
+      countableAssets,
+      nonCountableAssets,
+      totalIncome,
+      resourceLimit: assetLimit,
+      incomeLimit,
+      isResourceEligible,
+      isIncomeEligible,
+      excessResources,
+      urgency,
+      clientInfo,
+      assets,
+      income,
+      state: stateStr,
+      rules: stateRules
+    };
+    
+    // Generate strategies based on the assessment
+    logger.info('Generating eligibility strategies...');
+    const strategies = determineEligibilityStrategies(assessment);
+    const eligibilityPlan = planEligibilityApproach(strategies, assessment);
+    
+    // Return comprehensive assessment with strategies
     logger.info('Comprehensive Medicaid eligibility assessment completed successfully');
     return {
       countableAssets,
@@ -274,6 +295,8 @@ async function assessMedicaidEligibility(clientInfo, assets, income, medicalNeed
       isIncomeEligible,
       excessResources,
       urgency,
+      strategies,
+      eligibilityPlan,
       status: 'success'
     };
     

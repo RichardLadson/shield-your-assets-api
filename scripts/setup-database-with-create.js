@@ -1,33 +1,39 @@
 const fs = require('fs');
 const path = require('path');
-const pool = require('../config/database');
-const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
+const bcrypt = require('bcryptjs');
 
-async function createDatabaseIfNeeded() {
-  // Create a connection to the medicaid_admin database (RDS default) to create medicaid_planning
-  const adminPool = new Pool({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 5432,
-    database: 'medicaid_admin', // Connect to default user database created by RDS
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    ssl: false
-  });
+// Create two different pool connections - one to postgres DB to create the medicaid_planning DB
+const adminPool = new Pool({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT || 5432,
+  database: 'postgres', // Connect to default postgres database first
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  ssl: false
+});
 
+const appPool = new Pool({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME || 'medicaid_planning',
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  ssl: false
+});
+
+async function createDatabase() {
   try {
-    console.log('   Checking if medicaid_planning database exists...');
+    console.log('🏗️  Creating medicaid_planning database if it doesn\'t exist...');
     await adminPool.query('CREATE DATABASE medicaid_planning');
-    console.log('   ✅ Created medicaid_planning database');
+    console.log('✅ Database medicaid_planning created successfully!');
   } catch (error) {
     if (error.code === '42P04') {
-      console.log('   ℹ️  Database medicaid_planning already exists');
+      console.log('ℹ️  Database medicaid_planning already exists');
     } else {
-      console.error('   ❌ Failed to create database:', error.message);
+      console.error('❌ Failed to create database:', error.message);
       throw error;
     }
-  } finally {
-    await adminPool.end();
   }
 }
 
@@ -35,12 +41,12 @@ async function setupDatabase() {
   try {
     console.log('🚀 Setting up Medicaid Planning Database...\n');
     
-    // Skip database creation for now and use existing database
-    console.log('0️⃣  Using existing database connection...');
+    // First create the database if it doesn't exist
+    await createDatabase();
     
-    // Test connection first
+    // Test connection to the medicaid_planning database
     console.log('1️⃣  Testing database connection...');
-    await pool.query('SELECT NOW()');
+    await appPool.query('SELECT NOW()');
     console.log('✅ Database connection successful!\n');
     
     // Read and execute schema
@@ -52,7 +58,7 @@ async function setupDatabase() {
     }
     
     const schema = fs.readFileSync(schemaPath, 'utf8');
-    await pool.query(schema);
+    await appPool.query(schema);
     console.log('✅ Database schema created successfully!\n');
     
     // Seed initial data
@@ -68,7 +74,7 @@ async function setupDatabase() {
     console.log('🎉 DATABASE SETUP COMPLETE!');
     console.log('\n📋 What\'s been created:');
     console.log('   • PostgreSQL database: medicaid_planning');
-    console.log('   • Database user: medicaid_app');
+    console.log('   • Database user: medicaid_admin');
     console.log('   • 13 tables for complete Medicaid planning workflow');
     console.log('   • Test admin user (see credentials below)');
     console.log('   • Medicaid rules for FL, CA, NY, TX');
@@ -76,31 +82,19 @@ async function setupDatabase() {
     console.log('   Email: admin@medicaidplanning.com');
     console.log('   Password: admin123');
     console.log('\n🛠️  Next Steps:');
-    console.log('   1. Test the connection: node scripts/test-connection.js');
-    console.log('   2. Update your API endpoints to use the database');
-    console.log('   3. Add authentication middleware');
-    console.log('   4. Start integrating with goHighLevel');
+    console.log('   1. Test the API endpoints');
+    console.log('   2. Verify database connectivity from application');
+    console.log('   3. Set up monitoring and logging');
     
     process.exit(0);
   } catch (error) {
     console.error('❌ Database setup failed:', error.message);
-    
-    if (error.code === 'ECONNREFUSED') {
-      console.error('\n💡 Connection Error - Troubleshooting Steps:');
-      console.error('   1. Make sure PostgreSQL is installed and running');
-      console.error('   2. For macOS: brew services start postgresql@15');
-      console.error('   3. For Windows: Check PostgreSQL service in Services');
-      console.error('   4. Check your .env file for correct credentials');
-      console.error('   5. Make sure the database exists: createdb medicaid_planning');
-    } else if (error.code === '3D000') {
-      console.error('\n💡 Database Error - Database doesn\'t exist:');
-      console.error('   Run: createdb medicaid_planning');
-    } else if (error.code === '28P01') {
-      console.error('\n💡 Authentication Error:');
-      console.error('   Check your username/password in .env file');
-    }
-    
+    console.error('Full error:', error);
     process.exit(1);
+  } finally {
+    // Clean up connections
+    await adminPool.end().catch(() => {});
+    await appPool.end().catch(() => {});
   }
 }
 
@@ -110,7 +104,7 @@ async function seedInitialData() {
     console.log('   📝 Creating admin user...');
     const hashedPassword = await bcrypt.hash('admin123', 10);
     
-    await pool.query(`
+    await appPool.query(`
       INSERT INTO users (
         email, password_hash, first_name, last_name, role, organization
       ) VALUES ($1, $2, $3, $4, $5, $6)
@@ -130,7 +124,7 @@ async function seedInitialData() {
     console.log('   📝 Creating sample planner...');
     const plannerPassword = await bcrypt.hash('planner123', 10);
     
-    await pool.query(`
+    await appPool.query(`
       INSERT INTO users (
         email, password_hash, first_name, last_name, role, organization, phone, license_number
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -154,14 +148,14 @@ async function seedInitialData() {
       {
         state_code: 'FL',
         effective_date: '2024-01-01',
-        individual_resource_limit: 200000, // $2,000 in cents
-        individual_income_limit: 290100, // $2,901 in cents
-        community_spouse_resource_allowance_min: 2972400, // $29,724
-        community_spouse_resource_allowance_max: 14862000, // $148,620
-        community_spouse_income_allowance: 372600, // $3,726
+        individual_resource_limit: 200000,
+        individual_income_limit: 290100,
+        community_spouse_resource_allowance_min: 2972400,
+        community_spouse_resource_allowance_max: 14862000,
+        community_spouse_income_allowance: 372600,
         has_estate_recovery: true,
         lookback_period_months: 60,
-        penalty_divisor: 950000, // $9,500 (average monthly nursing home cost in cents)
+        penalty_divisor: 950000,
       },
       {
         state_code: 'CA',
@@ -173,7 +167,7 @@ async function seedInitialData() {
         community_spouse_income_allowance: 372600,
         has_estate_recovery: true,
         lookback_period_months: 60,
-        penalty_divisor: 1200000, // $12,000 (higher cost in CA)
+        penalty_divisor: 1200000,
       },
       {
         state_code: 'NY',
@@ -185,7 +179,7 @@ async function seedInitialData() {
         community_spouse_income_allowance: 372600,
         has_estate_recovery: true,
         lookback_period_months: 60,
-        penalty_divisor: 1100000, // $11,000
+        penalty_divisor: 1100000,
       },
       {
         state_code: 'TX',
@@ -195,14 +189,14 @@ async function seedInitialData() {
         community_spouse_resource_allowance_min: 2972400,
         community_spouse_resource_allowance_max: 14862000,
         community_spouse_income_allowance: 372600,
-        has_estate_recovery: false, // Texas doesn't have estate recovery
+        has_estate_recovery: false,
         lookback_period_months: 60,
-        penalty_divisor: 850000, // $8,500
+        penalty_divisor: 850000,
       }
     ];
 
     for (const rule of medicaidRulesData) {
-      await pool.query(`
+      await appPool.query(`
         INSERT INTO medicaid_rules (
           state_code, effective_date, individual_resource_limit, individual_income_limit,
           community_spouse_resource_allowance_min, community_spouse_resource_allowance_max,
@@ -222,7 +216,7 @@ async function seedInitialData() {
     
     // Add sample care providers
     console.log('   📝 Adding sample care providers...');
-    await pool.query(`
+    await appPool.query(`
       INSERT INTO care_providers (
         name, provider_type, phone, email, accepts_medicaid, medicaid_certified,
         private_pay_rate, medicaid_rate, cms_rating, address
@@ -257,7 +251,7 @@ async function seedInitialData() {
 async function verifySetup() {
   try {
     // Check table counts
-    const tableResult = await pool.query(`
+    const tableResult = await appPool.query(`
       SELECT count(*) as table_count 
       FROM information_schema.tables 
       WHERE table_schema = 'public'
@@ -265,15 +259,15 @@ async function verifySetup() {
     console.log(`   📊 Created ${tableResult.rows[0].table_count} tables`);
     
     // Check user count
-    const userResult = await pool.query('SELECT count(*) as user_count FROM users');
+    const userResult = await appPool.query('SELECT count(*) as user_count FROM users');
     console.log(`   👥 Created ${userResult.rows[0].user_count} users`);
     
     // Check rules count
-    const rulesResult = await pool.query('SELECT count(*) as rules_count FROM medicaid_rules');
+    const rulesResult = await appPool.query('SELECT count(*) as rules_count FROM medicaid_rules');
     console.log(`   📋 Created ${rulesResult.rows[0].rules_count} Medicaid rule sets`);
     
     // Check providers count
-    const providersResult = await pool.query('SELECT count(*) as providers_count FROM care_providers');
+    const providersResult = await appPool.query('SELECT count(*) as providers_count FROM care_providers');
     console.log(`   🏥 Created ${providersResult.rows[0].providers_count} care providers`);
     
   } catch (error) {
@@ -281,13 +275,6 @@ async function verifySetup() {
     throw error;
   }
 }
-
-// Handle graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('\n🛑 Shutting down...');
-  await pool.end();
-  process.exit(0);
-});
 
 // Run the setup
 setupDatabase();

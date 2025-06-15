@@ -1,5 +1,13 @@
 // Superuser database connection utility
-require('dotenv').config({ path: '.env.superuser' });
+// Only load dotenv in development
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    require('dotenv').config({ path: '.env.superuser' });
+  } catch (err) {
+    // dotenv is not available - likely in production mode without dev dependencies
+    console.log('dotenv not available in superuser-connect.js - using environment variables directly');
+  }
+}
 const { Pool } = require('pg');
 
 const superuserPool = new Pool({

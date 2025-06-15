@@ -1,5 +1,13 @@
 const { Pool } = require('pg');
-require('dotenv').config();
+// Only load dotenv in development
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    require('dotenv').config();
+  } catch (err) {
+    // dotenv is not available - likely in production mode without dev dependencies
+    console.log('dotenv not available in database.js - using environment variables directly');
+  }
+}
 
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
