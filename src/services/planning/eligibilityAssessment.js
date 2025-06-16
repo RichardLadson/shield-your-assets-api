@@ -280,8 +280,22 @@ async function assessMedicaidEligibility(clientInfo, assets, income, medicalNeed
     
     // Generate strategies based on the assessment
     logger.info('Generating eligibility strategies...');
-    const strategies = determineEligibilityStrategies(assessment);
-    const eligibilityPlan = planEligibilityApproach(strategies, assessment);
+    const oldStrategies = determineEligibilityStrategies(assessment);
+    const eligibilityPlan = planEligibilityApproach(oldStrategies, assessment);
+    
+    // Generate enhanced strategies
+    const { getStrategiesForAssessment } = require('../enhanced-strategies/enhancedStrategyService');
+    let enhancedStrategies = [];
+    try {
+      enhancedStrategies = await getStrategiesForAssessment(assessment);
+      logger.info(`Generated ${enhancedStrategies.length} enhanced strategies`);
+    } catch (error) {
+      logger.warn('Failed to generate enhanced strategies, falling back to old format:', error.message);
+      enhancedStrategies = [];
+    }
+    
+    // Use enhanced strategies if available, otherwise fall back to old strategies
+    const strategies = enhancedStrategies.length > 0 ? enhancedStrategies : oldStrategies;
     
     // Return comprehensive assessment with strategies
     logger.info('Comprehensive Medicaid eligibility assessment completed successfully');

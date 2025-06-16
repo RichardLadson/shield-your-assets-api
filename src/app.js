@@ -117,6 +117,7 @@ app.get('/', (req, res) => {
 app.use('/api/eligibility', require('./routes/eligibilityRoutes'));
 app.use('/api/planning', require('./routes/planningRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
+app.use('/api/enhanced-strategies', require('./routes/enhancedStrategies'));
 app.use('/api/webhooks', require('./routes/webhookRoutes'));
 
 // 404 handler
