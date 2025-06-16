@@ -6,6 +6,9 @@ const eligibilityController = require('../controllers/eligibilityController');
 // POST route for eligibility assessment
 router.post('/assess', eligibilityController.assessEligibility);
 
+// POST route for enhanced eligibility report
+router.post('/enhanced-report', eligibilityController.generateEnhancedReport);
+
 // GET route for state-specific rules
 router.get('/rules/:state', eligibilityController.getStateMedicaidRules);
 

@@ -1,17 +1,8 @@
 // Enhanced Strategy Service
 // Handles all operations for the new enhanced strategy system
 
-const { Pool } = require('pg');
+const db = require('../../../config/database');
 const logger = require('../../config/logger');
-
-// Database connection
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-});
 
 /**
  * Get all enhanced strategies
@@ -54,7 +45,7 @@ async function getAllEnhancedStrategies(filters = {}) {
     
     query += ' ORDER BY sort_order ASC, effectiveness_score DESC, id ASC';
     
-    const result = await pool.query(query, queryParams);
+    const result = await db.query(query, queryParams);
     
     logger.info(`Retrieved ${result.rows.length} enhanced strategies`, { filters });
     return result.rows;
@@ -82,7 +73,7 @@ async function getEnhancedStrategyById(id) {
       WHERE id = $1 AND is_active = true
     `;
     
-    const result = await pool.query(query, [id]);
+    const result = await db.query(query, [id]);
     
     if (result.rows.length === 0) {
       logger.warn(`Enhanced strategy not found: ${id}`);
@@ -115,7 +106,7 @@ async function getEnhancedStrategyByName(formalName) {
       WHERE formal_name = $1 AND is_active = true
     `;
     
-    const result = await pool.query(query, [formalName]);
+    const result = await db.query(query, [formalName]);
     
     if (result.rows.length === 0) {
       logger.warn(`Enhanced strategy not found by name: ${formalName}`);
@@ -146,16 +137,17 @@ async function mapOldStrategiesToEnhanced(oldStrategyNames) {
     
     // Strategy name mapping (old names to new formal names)
     const strategyMapping = {
-      'Reduce countable assets through exempt purchases or annuities': 'Asset Conversion Strategy',
-      'Transfer excess assets to a community spouse if allowed': 'Spousal Transfer Strategy',
-      'Consider setting up a Medicaid asset protection trust': 'Irrevocable Trust Planning',
-      'Establish a Qualified Income Trust (Miller Trust) for excess income': 'Qualified Income Trust (Miller Trust)',
-      'Purchase a Medicaid-compliant annuity to convert assets to income stream': 'Medicaid-Compliant Annuity',
-      'Irrevocable Trust': 'Irrevocable Trust Planning',
-      'Spousal Transfer': 'Spousal Transfer Strategy',
-      'Asset Protection Trust': 'Irrevocable Trust Planning',
-      'Miller Trust': 'Qualified Income Trust (Miller Trust)',
-      'Medicaid Annuity': 'Medicaid-Compliant Annuity'
+      'Reduce countable assets through exempt purchases or annuities': 'Strategy 3 - ASSET_PLANNING',
+      'Transfer excess assets to a community spouse if allowed': 'Strategy 2 - ASSET_PLANNING',
+      'Consider setting up a Medicaid asset protection trust': 'Strategy 1 - ASSET_PLANNING',
+      'Establish a Qualified Income Trust (Miller Trust) for excess income': 'Strategy 8 - INCOME_PLANNING',
+      'Purchase a Medicaid-compliant annuity to convert assets to income stream': 'Strategy 4 - ASSET_PLANNING',
+      'Use income to pay down medical expenses and care liability': 'Strategy 9 - INCOME_PLANNING',
+      'Irrevocable Trust': 'Strategy 15 - TRUST_PLANNING',
+      'Spousal Transfer': 'Strategy 2 - ASSET_PLANNING',
+      'Asset Protection Trust': 'Strategy 1 - ASSET_PLANNING',
+      'Miller Trust': 'Strategy 8 - INCOME_PLANNING',
+      'Medicaid Annuity': 'Strategy 4 - ASSET_PLANNING'
     };
     
     for (const oldName of oldStrategyNames) {
@@ -207,45 +199,94 @@ async function getStrategiesForAssessment(assessment) {
   try {
     const strategies = [];
     
-    // Asset planning strategies
-    if (assessment.excessResources > 0) {
-      if (assessment.clientInfo && assessment.clientInfo.maritalStatus === 'married') {
-        // Married - prioritize spousal transfer
-        const spousalStrategy = await getEnhancedStrategyByName('Spousal Transfer Strategy');
-        if (spousalStrategy) strategies.push(spousalStrategy);
-      }
-      
-      // Always include asset conversion for excess resources
-      const conversionStrategy = await getEnhancedStrategyByName('Asset Conversion Strategy');
-      if (conversionStrategy) strategies.push(conversionStrategy);
-      
-      // For larger amounts, suggest annuity
-      if (assessment.excessResources > 50000) {
-        const annuityStrategy = await getEnhancedStrategyByName('Medicaid-Compliant Annuity');
-        if (annuityStrategy) strategies.push(annuityStrategy);
-      }
-      
-      // For long-term planning, suggest trust
-      if (assessment.urgency !== 'High' && assessment.excessResources > 100000) {
-        const trustStrategy = await getEnhancedStrategyByName('Irrevocable Trust Planning');
-        if (trustStrategy) strategies.push(trustStrategy);
-      }
+    // Determine urgency level for timing-based recommendations
+    const urgency = assessment.urgency || 'Medium';
+    const isHighUrgency = urgency.toLowerCase().includes('high');
+    const hasExcessResources = (assessment.excessResources || 0) > 0;
+    const isMarried = assessment.clientInfo?.maritalStatus?.toLowerCase() === 'married';
+    const excessAmount = assessment.excessResources || 0;
+    
+    // 1. ASSET PLANNING STRATEGIES (only if relevant)
+    if (hasExcessResources) {
+      // Get all relevant asset planning strategies for excess resources
+      const assetStrategies = await getAllEnhancedStrategies({ category: 'Asset Planning' });
+      strategies.push(...assetStrategies);
     }
     
-    // Income planning strategies
+    // 2. INCOME PLANNING STRATEGIES (only if income is over limit)
     if (!assessment.isIncomeEligible) {
-      const millerTrust = await getEnhancedStrategyByName('Qualified Income Trust (Miller Trust)');
-      if (millerTrust) strategies.push(millerTrust);
+      const incomeStrategies = await getAllEnhancedStrategies({ category: 'Income Planning' });
+      strategies.push(...incomeStrategies);
     }
     
-    // Remove duplicates and sort by effectiveness
+    // 3. TRUST PLANNING STRATEGIES (for long-term planning with significant assets)
+    if (!isHighUrgency && excessAmount > 50000) {
+      const trustStrategies = await getAllEnhancedStrategies({ category: 'Trust Planning' });
+      strategies.push(...trustStrategies);
+    }
+    
+    // 4. ANNUITY PLANNING STRATEGIES (for moderate excess assets)
+    if (excessAmount > 25000) {
+      const annuityStrategies = await getAllEnhancedStrategies({ category: 'Annuity Planning' });
+      strategies.push(...annuityStrategies);
+    }
+    
+    // 5. COMMUNITY SPOUSE PLANNING (only if married)
+    if (isMarried) {
+      const spouseStrategies = await getAllEnhancedStrategies({ category: 'Community Spouse Planning' });
+      strategies.push(...spouseStrategies);
+    }
+    
+    // 6. CRISIS PLANNING (only if high urgency situation)
+    if (isHighUrgency) {
+      const crisisStrategies = await getAllEnhancedStrategies({ category: 'Crisis Planning' });
+      strategies.push(...crisisStrategies);
+    }
+    
+    // 7. ESTATE RECOVERY PLANNING (only if they have assets at risk)
+    if (hasExcessResources || excessAmount > 10000) {
+      const estateStrategies = await getAllEnhancedStrategies({ category: 'Estate Recovery Planning' });
+      strategies.push(...estateStrategies);
+    }
+    
+    // 8. POST-ELIGIBILITY PLANNING (always include - helps with preparation)
+    const postEligibilityStrategies = await getAllEnhancedStrategies({ category: 'Post-Eligibility Planning' });
+    strategies.push(...postEligibilityStrategies);
+    
+    // 9. SPECIALIZED PLANNING (for complex situations only)
+    if (excessAmount > 100000 || isMarried) {
+      const specializedStrategies = await getAllEnhancedStrategies({ category: 'Specialized Planning' });
+      strategies.push(...specializedStrategies);
+    }
+    
+    // 10. COMPLIANCE & MONITORING (always include - important for all clients)
+    const complianceStrategies = await getAllEnhancedStrategies({ category: 'Compliance & Monitoring' });
+    strategies.push(...complianceStrategies);
+    
+    // Remove duplicates and sort by effectiveness and timing
     const uniqueStrategies = strategies.filter((strategy, index, self) => 
       index === self.findIndex(s => s.id === strategy.id)
     );
     
-    uniqueStrategies.sort((a, b) => b.effectiveness_score - a.effectiveness_score);
+    // Sort by: immediate timing first, then effectiveness score, then sort_order
+    uniqueStrategies.sort((a, b) => {
+      // Prioritize immediate timing
+      if (a.timing_category === 'immediate' && b.timing_category !== 'immediate') return -1;
+      if (b.timing_category === 'immediate' && a.timing_category !== 'immediate') return 1;
+      
+      // Then by effectiveness score
+      if (a.effectiveness_score !== b.effectiveness_score) {
+        return b.effectiveness_score - a.effectiveness_score;
+      }
+      
+      // Finally by sort order
+      return a.sort_order - b.sort_order;
+    });
     
-    logger.info(`Generated ${uniqueStrategies.length} strategies for assessment`);
+    // Return all relevant strategies - no artificial limit
+    // The UI can handle pagination or scrolling if needed
+    
+    logger.info(`Generated ${uniqueStrategies.length} relevant strategies for assessment (from ${strategies.length} total before deduplication)`);
     return uniqueStrategies;
     
   } catch (error) {
@@ -271,7 +312,7 @@ async function getStrategyCategories() {
       ORDER BY category
     `;
     
-    const result = await pool.query(query);
+    const result = await db.query(query);
     
     logger.info(`Retrieved ${result.rows.length} strategy categories`);
     return result.rows;

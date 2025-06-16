@@ -2,6 +2,7 @@
 const logger = require('../config/logger');
 const { assessMedicaidEligibility } = require('../services/planning/eligibilityAssessment');
 const { getMedicaidRules } = require('../services/utils/medicaidRulesLoader');
+const { generateEnhancedEligibilityReport } = require('../services/reporting/enhancedEligibilityReport');
 const { Client, Assessment } = require('../models');
 const crypto = require('crypto');
 
@@ -101,6 +102,27 @@ exports.assessEligibility = async (req, res) => {
       return res.status(400).json(result);
     }
     
+    // Generate the enhanced HTML report
+    try {
+      const enhancedReport = await generateEnhancedEligibilityReport(
+        result,
+        clientInfo,
+        assets,
+        income,
+        state
+      );
+      
+      if (enhancedReport.status === 'success') {
+        // Add the embedded HTML report for React components
+        result.enhancedReport = enhancedReport.embeddedReport;
+        result.fullHtmlReport = enhancedReport.htmlReport;
+        result.reportData = enhancedReport.reportData;
+      }
+    } catch (reportError) {
+      logger.warn('Failed to generate enhanced report, continuing with basic assessment:', reportError.message);
+      // Don't fail the whole request if enhanced report fails
+    }
+    
     // Save client and assessment to database
     try {
       // For now, use a default user_id - in production this would come from authentication
@@ -171,6 +193,88 @@ exports.getStateMedicaidRules = async (req, res) => {
     }));
   } catch (error) {
     logger.error(`Error in getStateMedicaidRules controller: ${error.message}`);
+    return res.status(500).json({
+      status: 'error',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Generate enhanced eligibility report
+ */
+exports.generateEnhancedReport = async (req, res) => {
+  try {
+    logger.info('Received enhanced eligibility report request');
+    
+    const { client_info, assets, income, state } = req.body;
+    
+    // Validate required fields
+    if (!client_info || !assets || !income || !state) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Missing required fields: client_info, assets, income, state'
+      });
+    }
+    
+    // First, get the basic eligibility assessment
+    const clientInfo = {
+      name: client_info.name,
+      age: client_info.age,
+      maritalStatus: client_info.marital_status,
+      healthStatus: client_info.health_status,
+      isCrisis: client_info.is_crisis || false
+    };
+    
+    const medicalNeeds = {
+      criticalHealth: client_info.health_status === 'critical'
+    };
+    
+    const assessment = await assessMedicaidEligibility(
+      clientInfo, 
+      assets, 
+      income, 
+      medicalNeeds, 
+      state, 
+      clientInfo.isCrisis || false
+    );
+    
+    if (assessment.status === 'error') {
+      logger.error(`Error in assessment: ${assessment.error}`);
+      return res.status(400).json(assessment);
+    }
+    
+    // Generate the enhanced HTML report
+    const enhancedReport = await generateEnhancedEligibilityReport(
+      assessment,
+      clientInfo,
+      assets,
+      income,
+      state
+    );
+    
+    if (enhancedReport.status !== 'success') {
+      logger.error('Error generating enhanced report');
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to generate enhanced eligibility report'
+      });
+    }
+    
+    logger.info('Successfully generated enhanced eligibility report');
+    
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        assessment: assessment,
+        reportData: enhancedReport.reportData,
+        htmlReport: enhancedReport.htmlReport,
+        embeddedReport: enhancedReport.embeddedReport
+      }
+    });
+    
+  } catch (error) {
+    logger.error(`Error in generateEnhancedReport controller: ${error.message}`);
     return res.status(500).json({
       status: 'error',
       message: error.message
