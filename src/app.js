@@ -59,9 +59,17 @@ const planningLimiter = rateLimit({
 app.use('/api/', apiLimiter);
 app.use('/api/planning', planningLimiter);
 
-// TEMPORARY CORS Configuration - Allow frontend domain
+// CORS Configuration - Allow multiple frontend domains including Lovable
 const corsOptions = {
-  origin: ['https://d3btqqunljs3nt.cloudfront.net', 'https://eligibilityApp.nationalmedicaidplanning.com', 'http://localhost:8080'],
+  origin: [
+    'https://d3btqqunljs3nt.cloudfront.net',
+    'https://eligibilityApp.nationalmedicaidplanning.com',
+    'http://localhost:8080',
+    'http://localhost:5173', // Vite dev server
+    'https://05cc14f2-4909-4c06-9af5-7bc54650b4a7.lovableproject.com', // Specific Lovable project
+    /https:\/\/.*\.lovableproject\.com$/, // Allow all Lovable project subdomains
+    /https:\/\/.*\.lovable\.app$/ // Allow all Lovable app subdomains
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
